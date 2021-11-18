@@ -11,7 +11,6 @@ int get_num(char* s) {
 
 
 bool check(int argc, int* positions) {
-    bool correct = true;
     for (int i = 0; i < argc; ++i) {
         for (int j = i + 1; j < argc; ++j) {
             if (positions[i] == positions[j]) {
@@ -67,5 +66,7 @@ int main(int argc, char** argv) {
             std::cin >> arrays[i][j];
         }
     }
+    delete[] sizes;
+    delete[] arrays;
     std::cout << solve(argc, sizes, arrays, 0) << '\n';
 }
