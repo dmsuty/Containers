@@ -11,6 +11,8 @@ String operator+ (const char& c, const String& s);
 
 bool operator== (const String& s1, const String& s2);
 
+size_t c_string_size(const char* s);
+
 class String {
 
 private:
@@ -43,14 +45,8 @@ private:
 public:
     String(): str(new char[1]), sz(0), capacity(1) {}
 
-    String(const char* s) {
-        size_t s_size = 0;
-        while (s[s_size] != '\0') {
-            ++s_size;
-        }
-        sz = s_size;
-        capacity = s_size * 2;
-        str = new char[capacity];
+    String(const char* s):
+    str(new char[c_string_size(s) * 2]), sz(c_string_size(s)), capacity(c_string_size(s) * 2) {
         memcpy(str, s, sz);
     }
 
@@ -164,6 +160,15 @@ public:
 
     friend std::istream& operator>> (std::istream& in, const String& point);
 };
+
+
+size_t c_string_size(const char* s) {
+    size_t ret = 0;
+    while (s[ret] != '\0') {
+        ++ret;
+    }
+    return ret;
+}
 
 
 String operator+(const String& s1, const String& s2) {
