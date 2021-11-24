@@ -46,12 +46,12 @@ public:
     String(): str(new char[1]), sz(0), capacity(1) {}
 
     String(const char* s):
-    str(new char[c_string_size(s) * 2]), sz(c_string_size(s)), capacity(c_string_size(s) * 2) {
+    str(new char[c_string_size(s) * 2]), sz(c_string_size(s)), capacity(c_string_size(s) * 2 + 1) {
         memcpy(str, s, sz);
     }
 
     String(const size_t& new_sz, const char& c):
-        str(new char[new_sz * 2]), sz(new_sz), capacity(new_sz * 2) {
+        str(new char[new_sz * 2]), sz(new_sz), capacity(new_sz * 2 + 1) {
         memset(str, c, new_sz);
     }
 
