@@ -32,7 +32,11 @@ long long sum_of_products(int argc, int* positions, int** arrays) {
 
 
 long long solve(int argc, int* sizes, int** arrays, int cur_pos, int* positions=nullptr) {
-    if (cur_pos == argc && check(argc, positions)) {
+    if (!check(cur_pos, positions)) {
+        delete[] positions;
+        return 0;
+    }
+    else if (cur_pos == argc) {
         long long ret = sum_of_products(argc, positions, arrays);
         delete[] positions;
         return ret;
@@ -50,6 +54,7 @@ long long solve(int argc, int* sizes, int** arrays, int cur_pos, int* positions=
     for (int i = 0; i < sizes[cur_pos]; ++i) {
         ret += solve(argc, sizes, arrays, cur_pos + 1, new_slay[i]);
     }
+    delete[] new_slay;
     return ret;
 }
 
@@ -66,7 +71,10 @@ int main(int argc, char** argv) {
             std::cin >> arrays[i][j];
         }
     }
+    std::cout << solve(argc, sizes, arrays, 0) << '\n';
+    for (int i = 0; i < argc; ++i) {
+        delete[] arrays[i];
+    }
     delete[] sizes;
     delete[] arrays;
-    std::cout << solve(argc, sizes, arrays, 0) << '\n';
 }
