@@ -5,13 +5,13 @@
 
 class BigInteger;
 
-bool operator== (const BigInteger& n1, const BigInteger& n2);
-
-bool operator!= (const BigInteger& n1, const BigInteger& n2);
-
 bool operator< (const BigInteger& n1, const BigInteger& n2);
 
+bool operator== (const BigInteger& n1, const BigInteger& n2);
+
 bool operator> (const BigInteger& n1, const BigInteger& n2);
+
+bool operator!= (const BigInteger& n1, const BigInteger& n2);
 
 bool operator<= (const BigInteger& n1, const BigInteger& n2);
 
@@ -50,8 +50,8 @@ int sign_of_number(const int& n) {
 class BigInteger {
 
 private:    
-    int power_of_radix=6;
-    int radix=1'000'000; //must be a power of ten.
+    int power_of_radix=4;
+    int radix=10'000; //must be a power of ten.
     std::vector<int> rank;
 
     void delete_nulls() {
@@ -107,9 +107,24 @@ public:
         }
     }
 
-    BigInteger(const BigInteger& ) = default;
+    BigInteger(const BigInteger& other) = default;
 
     ~BigInteger() = default;
+
+    int sign() const {
+        return sign_of_number(rank.back());
+    }
+    
+    int operator[](const int& k) const {
+        if (rank.size() <= k) {
+            return 0;
+        }
+        return rank[k];
+    }
+
+    int size() const {
+        return rank.size();
+    }
 
     BigInteger& operator+= (const BigInteger& other) {
         while (rank.size() < other.rank.size()) {
@@ -162,6 +177,16 @@ public:
     }
 
     BigInteger& operator/= (const BigInteger& other) {
+        BigInteger result;
+        BigInteger cur_dividend;
+        
+        int carry = 0;
+        for (int position = rank.size() - 1; position >= other.rank.size() - 1; --position) {
+            cur_dividend *= radix;
+            cur_dividend += rank[position];
+            int quotient = (carry * radix + rank[position]) / other.rank.back();
+            
+        }
         return *this;
     }
 
@@ -235,4 +260,35 @@ BigInteger operator% (const BigInteger& n1, const BigInteger& n2) {
     BigInteger mod = BigInteger(n1);
     mod %= n2;
     return mod;
+}
+
+bool operator< (const BigInteger& n1, const BigInteger& n2) {
+    if (n1.sign() != n2.sign()) {
+        return n1.sign() < n2.sign();
+    }
+    int maxsize = std::max(n1.size(), n2.size());
+    return  n1[maxsize] < n2[maxsize];
+}
+
+bool operator== (const BigInteger& n1, const BigInteger& n2) {
+    for (int rank = 0; rank < std::max(n1.size(), n2.size()); ++rank) {
+        if (n1[rank] != n2[rank]) return false;
+    } 
+    return true;
+}
+
+bool operator> (const BigInteger& n1, const BigInteger& n2) {
+    return !(n1 < n2) && !(n1 == n2);
+}
+
+bool operator!= (const BigInteger& n1, const BigInteger& n2) {
+    return !(n1 == n2);
+}
+
+bool operator<= (const BigInteger& n1, const BigInteger& n2) {
+    return n1 < n2 || n1 == n2;
+}
+
+bool operator>= (const BigInteger& n1, const BigInteger& n2) {
+    return n1 > n2 || n1 == n2;
 }
