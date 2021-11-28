@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 class BigInteger;
@@ -16,24 +17,41 @@ bool operator<= (const BigInteger& n1, const BigInteger& n2);
 
 bool operator>= (const BigInteger& n1, const BigInteger& n2);
 
+BigInteger operator+ (const BigInteger& n1, const BigInteger& n2);
+
+BigInteger operator- (const BigInteger& n1, const BigInteger& n2);
+
+BigInteger operator* (const BigInteger& n1, const BigInteger& n2);
+
+BigInteger operator/ (const BigInteger& n1, const BigInteger& n2);
+
+BigInteger operator% (const BigInteger& n1, const BigInteger& n2);
+
 int number_of_digits(int n, const int& radix) {
     if (n == 0) {
         return 1;
     }
     n = abs(n);
-    int ret = 0;
+    int result = 0;
     int cur_deg = 0;
     int cur_pow = 1; 
-    while (cur_pow < n) {
+    while (cur_pow <= n) {
         cur_pow *= radix;
         ++cur_deg;
     }
     return cur_deg;
 }
 
+int sign_of_number(const int& n) {
+    if (n >= 0) return 1;
+    return -1;
+}
+
 class BigInteger {
-private://make it private later!!!!!
-    int radix=10;
+
+private:    
+    int power_of_radix=6;
+    int radix=1'000'000; //must be a power of ten.
     std::vector<int> rank;
 
     void delete_nulls() {
@@ -42,53 +60,134 @@ private://make it private later!!!!!
         }
     }
 
+    void carryover() {
+        int carry = 0;
+        for (int i = 0; i < rank.size(); ++i) {
+            int new_carry = (rank[i] + carry) / radix;
+            rank[i] = (rank[i] + carry) % radix;
+            carry = new_carry;
+        }
+        while (carry) {
+            rank.push_back(carry % radix);
+            carry /= radix;
+        }
+    }
+
+    void reconstructor() {
+        carryover();
+        int sign = 1;
+        if (rank.back() < 0) {
+            sign = -1;
+        }
+        size_t position = 0;
+        while (position < rank.size()) {
+            if (sign_of_number(rank[position]) == sign || rank[position] == 0) {
+                ++position;
+                continue;
+            }
+            rank[position] += 10 * sign;
+            ++position;
+            while (sign_of_number(rank[position]) != sign || rank[position] == 0) {
+                rank[position] += 9 * sign;
+                ++position;
+            }
+            rank[position] -= 1 * sign;
+            ++position;
+        }
+        delete_nulls();
+    }
+
 public:
     BigInteger(): rank({0}) {}
 
-    BigInteger(int n): rank(number_of_digits(n, radix)) {
+    BigInteger(int n) {
         while (n) {
             rank.push_back(n % radix);
             n /= radix;
         }
     }
 
+    BigInteger(const BigInteger& ) = default;
+
+    ~BigInteger() = default;
+
     BigInteger& operator+= (const BigInteger& other) {
         while (rank.size() < other.rank.size()) {
             rank.push_back(0);
         }
         int carry = 0;
-        for (int i = 0; i < rank.size(); ++i) {
+        for (size_t i = 0; i < rank.size(); ++i) {
             int other_val = 0;
             if (i < other.rank.size()) {
                 other_val = other.rank[i];
             }
             rank[i] += other_val + carry;
-            carry = rank[i] / radix;
-            rank[i] %= radix; 
         }
-        if (carry) {
-            rank.push_back(carry);
-        }
+        reconstructor();
+        return *this;
     }
 
     BigInteger& operator*= (const BigInteger& other) {
-        //some code
+        size_t self_size = rank.size();
+        size_t other_size = other.rank.size();
+        while (rank.size() != self_size + other_size - 1) {
+            rank.push_back(0);
+        }
+        for (int i = rank.size() - 1; i >= 0; --i) {
+            int start_value = rank[i];
+            for (int j1 = 0; j1 <= i; ++j1) {
+                int j2 = i - j1;
+                rank[i] += rank[j1] * other.rank[j2];
+            }
+            rank[i] -= start_value;
+        }
+        reconstructor();
+        return *this;
     }
 
     BigInteger& operator-= (const BigInteger& other) {
-        //some code
+        while (rank.size() < other.rank.size()) {
+            rank.push_back(0);
+        }
+        int carry = 0;
+        for (size_t i = 0; i < rank.size(); ++i) {
+            int other_val = 0;
+            if (i < other.rank.size()) {
+                other_val = other.rank[i];
+            }
+            rank[i] = other_val + carry;
+        }
+        reconstructor();
+        return *this;
     }
 
     BigInteger& operator/= (const BigInteger& other) {
-        //some code
+        return *this;
     }
 
     BigInteger& operator%= (const BigInteger& other) {
-        //some code
+        return *this;
     }
 
-    std::string to_String() {
-        //some code
+    std::string toString() const {
+        std::string result;
+        if (rank.back() < 0) {
+            result = "-";
+        }
+        for (int i = rank.size() - 1; i >= 0; --i) {
+            if (i != rank.size() - 1) {
+                result += std::string(power_of_radix - number_of_digits(rank[i], 10), '0');
+            }
+            result += std::to_string(abs(rank[i]));
+        }
+        return result;
+    }
+
+    void show_each_rank() const {
+        for (int i = rank.size() - 1; i >= 0; i--) {
+            std::cout << rank[i] << " ";
+        }
+        std::cout << '\n';
     }
 
     //пробразования в int/bool
@@ -97,6 +196,43 @@ public:
     friend std::istream& operator>> (std::istream& in, BigInteger& n);
 };
 
-std::ostream& operator<< (std::ostream& out, const BigInteger& n);
+std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
+    out << n.toString();
+    return out;
+}
 
-std::istream& operator>> (std::istream& in, BigInteger& n);
+std::istream& operator>> (std::istream& in, BigInteger& n) {
+    n = 0;
+    //some code
+    return in;
+}
+
+BigInteger operator+ (const BigInteger& n1, const BigInteger& n2) {
+    BigInteger sum(n1);
+    sum += n2;
+    return sum;
+}
+
+BigInteger operator- (const BigInteger& n1, const BigInteger& n2) {
+    BigInteger difference(n1);
+    difference -= n2;
+    return difference;
+}
+
+BigInteger operator* (const BigInteger& n1, const BigInteger& n2) {
+    BigInteger product(n1);
+    product *= n2;
+    return product;
+}
+
+BigInteger operator/ (const BigInteger& n1, const BigInteger& n2) {
+    BigInteger division_result = BigInteger(n1);
+    division_result /= n2;
+    return division_result;
+}
+
+BigInteger operator% (const BigInteger& n1, const BigInteger& n2) {
+    BigInteger mod = BigInteger(n1);
+    mod %= n2;
+    return mod;
+}
