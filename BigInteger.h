@@ -216,6 +216,58 @@ public:
         return *this;
     }
 
+    BigInteger& operator++() {
+        size_t current_rank = 0;
+        if (sign() == 1) {
+            while (current_rank < rank.size() && rank[current_rank] == radix - 1) {
+                rank[current_rank] = 0;
+                ++current_rank;
+            }
+        } else {
+            while (current_rank < rank.size() && rank[current_rank] == 0) {
+                rank[current_rank] = -radix + 1;
+                ++current_rank;
+            }
+        }
+        if (current_rank == rank.size()) {
+            rank.push_back(0);
+        }
+        ++rank[current_rank];
+        return *this;
+    }
+
+    BigInteger operator ++(int) {
+        BigInteger result(*this);
+        ++(*this);
+        return result;
+    }
+
+    BigInteger& operator--() {
+        size_t current_rank = 0;
+        if (sign() == 1) {
+            while (current_rank < rank.size() && rank[current_rank] == 0) {
+                rank[current_rank] = radix - 1;
+                ++current_rank;
+            }
+        } else {
+            while (current_rank < rank.size() && rank[current_rank] == -radix + 1) {
+                rank[current_rank] = 0;
+                ++current_rank;
+            }
+        }
+        if (current_rank == rank.size()) {
+            rank.push_back(0);
+        }
+        --rank[current_rank];
+        return *this;
+    }
+
+    BigInteger operator --(int) {
+        BigInteger result(*this);
+        --(*this);
+        return result;
+    }
+
     std::string toString() const {
         std::string result;
         if (rank.size() == 0) {
@@ -234,6 +286,10 @@ public:
         return result;
     }
 
+    explicit operator bool() const {
+         return rank.size() == 0;
+    }
+
     void show_each_rank() const {
         for (int i = rank.size() - 1; i >= 0; i--) {
             std::cout << rank[i] << " ";
@@ -242,7 +298,6 @@ public:
     }
 
     //пробразования в int/bool
-    //инкремент/дикремент, постфикс/префикс
 
     friend std::istream& operator>> (std::istream& in, BigInteger& n);
 };
@@ -254,7 +309,15 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
 
 std::istream& operator>> (std::istream& in, BigInteger& n) {
     n = 0;
-    //some code
+    char c = in.get();
+    while (isspace(c)) {
+        c = in.get();
+    }
+    while (!isspace(c) && c != EOF) {
+        n *= 10;
+        n += c - '0';
+        c = in.get();
+    } 
     return in;
 }
 
