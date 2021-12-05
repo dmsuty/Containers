@@ -172,37 +172,25 @@ public:
     }
 
     BigInteger& operator/= (const BigInteger& divider) {
-        if (divider.size() > rank.size()) {
-            *this = BigInteger(0);
-            return *this;
-        }
+        int divider_sign = divider.sign();
+        int self_sign = sign();
+        *this *= self_sign;
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
-        int divider_sign = divider.sign();
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
-            std::cout << cur_dividend << " curr_dividend\n";
-            int high_digits = 0;
-            if (cur_dividend != 0) {
-                for (int cur_rank = cur_dividend.size() - 1; cur_rank + 1 >= divider.size(); --cur_rank) {
-                    high_digits = cur_dividend[cur_rank] + high_digits * radix;
-                }
+            int cur_quotient = 0;
+            BigInteger subtrahend = 0;
+            while (subtrahend + divider * divider_sign <= cur_dividend) {
+                ++cur_quotient;
+                subtrahend += divider * divider_sign;
             }
-            std::cout << high_digits << " high_digits\n";
-            int cur_quotient = high_digits / abs(divider[divider.size() - 1]);
-            BigInteger subtrahend = divider * cur_quotient * divider_sign;
-            std::cout << cur_quotient << " " << subtrahend << " before\n";
-            if (subtrahend > cur_dividend) {
-                subtrahend -= divider;
-                --cur_quotient;
-            }
-            std::cout << cur_quotient << " " << subtrahend << " after\n";
             quotient = quotient * radix + cur_quotient;
             cur_dividend -= subtrahend;
             if (i != 0) {
                 cur_dividend = cur_dividend * radix + rank[i - 1];
             }
         }
-        *this = quotient;
+        *this = quotient * divider_sign * self_sign;
         return *this;
     }
 
