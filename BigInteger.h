@@ -194,7 +194,25 @@ public:
         return *this;
     }
 
-    BigInteger& operator%= (const BigInteger& other) {
+    BigInteger& operator%= (const BigInteger& divider) {
+        int divider_sign = divider.sign();
+        int self_sign = sign();
+        *this *= self_sign;
+        BigInteger quotient(0);
+        BigInteger cur_dividend(0);
+        for (size_t i = rank.size(); i + 1 != 0; --i) {         
+            int cur_quotient = 0;
+            BigInteger subtrahend = 0;
+            while (subtrahend + divider * divider_sign <= cur_dividend) {
+                ++cur_quotient;
+                subtrahend += divider * divider_sign;
+            }
+            cur_dividend -= subtrahend;
+            if (i != 0) {
+                cur_dividend = cur_dividend * radix + rank[i - 1];
+            }
+        }
+        *this = cur_dividend * self_sign;
         return *this;
     }
 
