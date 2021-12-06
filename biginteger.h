@@ -29,31 +29,31 @@ BigInteger operator% (const BigInteger& n1, const BigInteger& n2);
 
 std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 
-int number_of_digits(int n, const int& radix) {
-    if (n == 0) {
-        return 1;
-    }
-    n = abs(n);
-    int cur_deg = 0;
-    int cur_pow = 1; 
-    while (cur_pow <= n) {
-        cur_pow *= radix;
-        ++cur_deg;
-    }
-    return cur_deg;
-}
-
-int sign_of_number(const int& n) {
-    if (n >= 0) return 1;
-    return -1;
-}
-
 class BigInteger {
 
 private:    
-    static const int power_of_radix=1;
-    static const int radix=10; //must be a power of ten.
+    static const int power_of_radix=4;
+    static const int radix=10'000; //must be a power of ten.
     std::vector<int> rank;
+
+    static int number_of_digits(int n, const int& radix) {
+        if (n == 0) {
+            return 1;
+        }
+        n = abs(n);
+        int cur_deg = 0;
+        int cur_pow = 1; 
+        while (cur_pow <= n) {
+            cur_pow *= radix;
+            ++cur_deg;
+        }
+        return cur_deg;
+    }
+
+    static int sign_of_number(const int& n) {
+        if (n >= 0) return 1;
+        return -1;
+    }
 
     void delete_nulls() {
         while (rank.size() && rank.back() == 0) {
@@ -149,7 +149,7 @@ public:
         }
         for (int i = rank.size() - 1; i >= 0; --i) {
             int start_value = rank[i];
-            for (int j1 = 0; j1 <= i; ++j1) {
+            for (int j1 = i; j1 >= 0; --j1) {
                 int j2 = i - j1;
                 rank[i] += rank[j1] * other[j2];
             }
@@ -287,17 +287,25 @@ public:
     }
 
     explicit operator bool() const {
-         return rank.size() == 0;
+         return *this != 0;
     }
 
-    void show_each_rank() const {
-        for (int i = rank.size() - 1; i >= 0; i--) {
-            std::cout << rank[i] << " ";
+    explicit operator int() const {
+        int result = 0;
+        for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
+            result *= radix;
+            result += rank[i];
         }
-        std::cout << '\n';
+        return result;
     }
 
-    //пробразования в int/bool
+    std::string  each_rank() const {
+        std::string result;
+        for (int i = rank.size() - 1; i >= 0; i--) {
+            result += std::to_string(rank[i]) + " ";
+        }
+        return result;
+    }
 
     friend std::istream& operator>> (std::istream& in, BigInteger& n);
 };
@@ -309,13 +317,18 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
 
 std::istream& operator>> (std::istream& in, BigInteger& n) {
     n = 0;
+    int sign = 1;
     char c = in.get();
     while (isspace(c)) {
         c = in.get();
     }
+    if (c == '-') {
+        sign = -1;
+    }
+    c = in.get();
     while (!isspace(c) && c != EOF) {
         n *= 10;
-        n += c - '0';
+        n += (c - '0') * sign;
         c = in.get();
     } 
     return in;
@@ -385,3 +398,197 @@ bool operator<= (const BigInteger& n1, const BigInteger& n2) {
 bool operator>= (const BigInteger& n1, const BigInteger& n2) {
     return n1 > n2 || n1 == n2;
 }
+
+
+class Rational;
+
+bool operator< (const Rational& n1, const Rational& n2);
+
+bool operator== (const Rational& n1, const Rational& n2);
+
+bool operator> (const Rational& n1, const Rational& n2);
+ 
+bool operator!= (const Rational& n1, const Rational& n2);
+
+bool operator<= (const Rational& n1, const Rational& n2);
+
+bool operator>= (const Rational& n1, const Rational& n2);
+
+Rational operator+ (const Rational& n1, const Rational& n2);
+
+Rational operator- (const Rational& n1, const Rational& n2);
+
+Rational operator* (const Rational& n1, const Rational& n2);
+
+Rational operator/ (const Rational& n1, const Rational& n2);
+
+std::ostream& operator<< (std::ostream& out, const Rational& n);
+
+class Rational {
+    
+private:
+    BigInteger numerator=0;
+    BigInteger denominator=1;
+
+    static BigInteger gcd(BigInteger a, BigInteger b) {
+        while (b) {
+            BigInteger a_copy(a);
+            a = b;
+            b = a_copy % b;
+        }
+        return a;
+    }
+
+    void reconstructor() {
+        BigInteger reducer = gcd(numerator, denominator);
+        numerator /= reducer;
+        denominator /= reducer;
+        numerator *= denominator.sign();
+        denominator *= denominator.sign();
+    }
+
+public:
+    Rational() = default;
+
+    Rational(const int& n): numerator(n) {};
+
+    Rational(const BigInteger& n): numerator(n) {};
+
+    Rational(const Rational&) = default;
+
+    Rational& operator+= (const Rational& other) {
+        denominator *= other.denominator;
+        numerator *= other.denominator;
+        numerator += other.numerator * denominator;
+        reconstructor();
+        return *this;
+    }
+
+    Rational& operator*= (const Rational& other) {
+        denominator *= other.denominator;
+        numerator *= other.numerator;
+        reconstructor();
+        return *this;
+    }
+
+    Rational& operator-= (const Rational& other) {
+        *this *= -1;
+        *this += other;
+        *this *= -1;
+        return *this;
+    }
+
+    Rational& operator/= (const Rational& other) {
+        numerator *= other.denominator;
+        denominator *= other.numerator;
+        reconstructor();
+        return *this;
+    }
+
+    Rational operator- () {
+        return Rational(*this) * -1;
+    }
+
+    std::string toString() {
+        std::string result = numerator.toString();
+        if (denominator != 1) {
+            result += "/" + denominator.toString();
+        }
+        return result;
+    }
+
+    std::string asDecimal(const size_t& precision) {
+        std::string result;
+        int sign = 1;
+        if (numerator < 0) {
+            sign = -1;
+            result += "-";
+        }
+        *this *= sign;
+        std::cout << numerator << " " << denominator << '\n';
+        result += (numerator / denominator).toString() + ".";
+        BigInteger dividend = numerator % denominator;
+        for (size_t i = 0; i < precision; ++i) {
+            result += (dividend * 10 / denominator).toString();
+            dividend = dividend * 10 % denominator;
+        }
+        *this *= sign;
+        return result;
+    }
+
+    explicit operator double() {
+        double result = 0.;
+        double degree_value = 1.;
+        result += static_cast<int>(numerator / denominator) * degree_value;
+        BigInteger dividend = numerator % denominator;
+        degree_value *= 0.1;
+        while (static_cast<int>(dividend * 10 / denominator) * degree_value != 0.) {
+            result += static_cast<int>(dividend * 10 / denominator) * degree_value;
+            degree_value *= 0.1;
+            dividend = dividend * 10 % denominator;
+        }
+        return result;
+    }
+
+    friend bool operator< (const Rational& a, const Rational& b);
+
+    friend bool operator== (const Rational& a, const Rational& b);
+
+    friend bool operator> (const Rational& a, const Rational& b);
+
+    friend bool operator!= (const Rational& a, const Rational& b);
+
+    friend bool operator<= (const Rational& a, const Rational& b);
+
+    friend bool operator>= (const Rational& a, const Rational& b);
+};
+
+bool operator< (const Rational& a, const Rational& b) {
+    return a.numerator * b.denominator > b.numerator * a.denominator;
+}
+
+bool operator== (const Rational& a, const Rational& b) {
+    return a.numerator * b.denominator == b.numerator * a.denominator;
+}
+
+bool operator> (const Rational& a, const Rational& b) {
+    return !(a < b) && !(a == b);
+}
+
+bool operator!= (const Rational& a, const Rational& b) {
+    return !(a == b);
+}
+
+bool operator<= (const Rational& a, const Rational& b) {
+    return a < b || a == b;
+}
+
+bool operator>= (const Rational& a, const Rational& b) {
+    return a == b || a > b;
+}
+
+Rational operator+ (const Rational& a, const Rational& b) {
+    Rational result(a);
+    result += b;
+    return result;
+}
+
+Rational operator- (const Rational& a, const Rational& b) {
+    Rational result(a);
+    result -= b;
+    return result;
+}
+
+Rational operator* (const Rational& a, const Rational& b) {
+    Rational result(a);
+    result *= b;
+    return result;
+}
+
+Rational operator/ (const Rational& a, const Rational& b) {
+    Rational result(a);
+    result /= b;
+    return result;
+}
+
+
