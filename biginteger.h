@@ -32,9 +32,9 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 class BigInteger {
 
 private:    
-    static const int power_of_radix=4;
-    static const int radix=10'000; //must be a power of ten.
-    std::vector<int> rank;
+    static const int power_of_radix=9;
+    static const int radix=1'000'000'000; //must be a power of ten.
+    std::vector<long long> rank;
 
     static int number_of_digits(int n, const int& radix) {
         if (n == 0) {
@@ -76,7 +76,7 @@ private:
 
     void reconstructor() {
         carryover();
-        delete_nulls();        
+        delete_nulls();
         int sign = 1;
         if (rank.size() && rank.back() < 0) {
             sign = -1;
@@ -87,10 +87,10 @@ private:
                 ++position;
                 continue;
             }
-            rank[position] += 10 * sign;
+            rank[position] += radix * sign;
             ++position;
             while (sign_of_number(rank[position]) != sign || rank[position] == 0) {
-                rank[position] += 9 * sign;
+                rank[position] += (radix - 1) * sign;
                 ++position;
             }
             rank[position] -= 1 * sign;
@@ -156,7 +156,6 @@ public:
             rank[i] -= start_value;
         }
         reconstructor();
-
         return *this;
     }
 
@@ -165,12 +164,16 @@ public:
     }
 
     BigInteger& operator-= (const BigInteger& other) {
-        *this *= -1;
-        *this += other;
-        *this *= -1;
+        while (rank.size() < other.size()) {
+            rank.push_back(0);
+        }
+        for (size_t i = 0; i < rank.size(); ++i) {
+            rank[i] -= other[i];
+        }
+        reconstructor();
         return *this;
     }
-
+    //лишние копирования
     BigInteger& operator/= (const BigInteger& divider) {
         int divider_sign = divider.sign();
         int self_sign = sign();
@@ -178,19 +181,26 @@ public:
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
-            int cur_quotient = 0;
-            BigInteger subtrahend = 0;
-            while (subtrahend + divider * divider_sign <= cur_dividend) {
-                ++cur_quotient;
-                subtrahend += divider * divider_sign;
+            int left_board = 0;
+            int right_board = radix;
+            while (left_board + 1 != right_board) {
+                int middle = (left_board + right_board) / 2;
+                if (divider * middle * divider_sign <= cur_dividend) {
+                    left_board = middle;
+                } else {
+                    right_board = middle;
+                }
             }
-            quotient = quotient * radix + cur_quotient;
-            cur_dividend -= subtrahend;
+            quotient.rank.push_back(left_board);
+            cur_dividend -= left_board * divider * divider_sign;
             if (i != 0) {
                 cur_dividend = cur_dividend * radix + rank[i - 1];
             }
         }
-        *this = quotient * divider_sign * self_sign;
+        for (size_t i = 0; i * 2 < quotient.size(); ++i) {
+            std::swap(quotient.rank[i], quotient.rank[quotient.size() - i - 1]);
+        }
+        *this = quotient * (divider_sign * self_sign);
         return *this;
     }
 
@@ -201,13 +211,17 @@ public:
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
-            int cur_quotient = 0;
-            BigInteger subtrahend = 0;
-            while (subtrahend + divider * divider_sign <= cur_dividend) {
-                ++cur_quotient;
-                subtrahend += divider * divider_sign;
+            int left_board = 0;
+            int right_board = radix;
+            while (left_board + 1 != right_board) {
+                int middle = (left_board + right_board) / 2;
+                if (divider * middle * divider_sign <= cur_dividend) {
+                    left_board = middle;
+                } else {
+                    right_board = middle;
+                }
             }
-            cur_dividend -= subtrahend;
+            cur_dividend -= left_board * divider * divider_sign;;
             if (i != 0) {
                 cur_dividend = cur_dividend * radix + rank[i - 1];
             }
@@ -280,7 +294,7 @@ public:
             if (i != rank.size() - 1) {
                 result += std::string(power_of_radix - number_of_digits(rank[i], 10), '0');
             }
-            result += std::to_string(abs(rank[i]));
+            result += std::to_string(std::abs(rank[i]));
             if (i == 0) break;
         }
         return result;
@@ -295,14 +309,6 @@ public:
         for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
             result *= radix;
             result += rank[i];
-        }
-        return result;
-    }
-
-    std::string  each_rank() const {
-        std::string result;
-        for (int i = rank.size() - 1; i >= 0; i--) {
-            result += std::to_string(rank[i]) + " ";
         }
         return result;
     }
@@ -324,6 +330,8 @@ std::istream& operator>> (std::istream& in, BigInteger& n) {
     }
     if (c == '-') {
         sign = -1;
+    } else {
+        n += (c - '0');
     }
     c = in.get();
     while (!isspace(c) && c != EOF) {
@@ -424,6 +432,7 @@ Rational operator/ (const Rational& n1, const Rational& n2);
 
 std::ostream& operator<< (std::ostream& out, const Rational& n);
 
+
 class Rational {
     
 private:
@@ -431,6 +440,8 @@ private:
     BigInteger denominator=1;
 
     static BigInteger gcd(BigInteger a, BigInteger b) {
+        a *= a.sign();
+        b *= b.sign();
         while (b) {
             BigInteger a_copy(a);
             a = b;
@@ -457,9 +468,9 @@ public:
     Rational(const Rational&) = default;
 
     Rational& operator+= (const Rational& other) {
-        denominator *= other.denominator;
         numerator *= other.denominator;
         numerator += other.numerator * denominator;
+        denominator *= other.denominator;
         reconstructor();
         return *this;
     }
@@ -472,9 +483,10 @@ public:
     }
 
     Rational& operator-= (const Rational& other) {
-        *this *= -1;
-        *this += other;
-        *this *= -1;
+        numerator *= other.denominator;
+        numerator -= other.numerator * denominator;
+        denominator *= other.denominator;
+        reconstructor();
         return *this;
     }
 
@@ -485,11 +497,11 @@ public:
         return *this;
     }
 
-    Rational operator- () {
+    Rational operator- () const {
         return Rational(*this) * -1;
     }
 
-    std::string toString() {
+    std::string toString() const {
         std::string result = numerator.toString();
         if (denominator != 1) {
             result += "/" + denominator.toString();
@@ -497,26 +509,21 @@ public:
         return result;
     }
 
-    std::string asDecimal(const size_t& precision) {
+    std::string asDecimal(const size_t& precision) const {
         std::string result;
-        int sign = 1;
         if (numerator < 0) {
-            sign = -1;
             result += "-";
         }
-        *this *= sign;
-        std::cout << numerator << " " << denominator << '\n';
-        result += (numerator / denominator).toString() + ".";
-        BigInteger dividend = numerator % denominator;
+        result += (numerator / denominator * numerator.sign()).toString() + ".";
+        BigInteger dividend = numerator % denominator * numerator.sign();
         for (size_t i = 0; i < precision; ++i) {
             result += (dividend * 10 / denominator).toString();
             dividend = dividend * 10 % denominator;
         }
-        *this *= sign;
         return result;
     }
 
-    explicit operator double() {
+    explicit operator double() const {
         double result = 0.;
         double degree_value = 1.;
         result += static_cast<int>(numerator / denominator) * degree_value;
@@ -544,7 +551,7 @@ public:
 };
 
 bool operator< (const Rational& a, const Rational& b) {
-    return a.numerator * b.denominator > b.numerator * a.denominator;
+    return a.numerator * b.denominator < b.numerator * a.denominator;
 }
 
 bool operator== (const Rational& a, const Rational& b) {
@@ -591,4 +598,8 @@ Rational operator/ (const Rational& a, const Rational& b) {
     return result;
 }
 
+std::ostream& operator<< (std::ostream& out, const Rational& n) {
+    out << n.toString();
+    return out;
+}
 
