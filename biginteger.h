@@ -32,8 +32,8 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 class BigInteger {
 
 private:    
-    static const int power_of_radix=6;
-    static const int radix=1000000; //must be a power of ten.
+    static const int power_of_radix=9;
+    static const int radix=1'000'000'000; //must be a power of ten.
     std::vector<long long> rank;
     int sign = 1;
 
@@ -182,8 +182,12 @@ public:
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
-            int left_board = 0;
-            int right_board = radix;
+            long long high_digits = 0;
+            for (int j = (int)cur_dividend.size() - 1; j >= (int)divider.size() - 1; --j) {
+                high_digits = high_digits * radix + cur_dividend[j];
+            }
+            int left_board = high_digits / (divider.rank.back() + 1);
+            int right_board = high_digits / divider.rank.back() + 1;
             while (left_board + 1 != right_board) {
                 int middle = (left_board + right_board) / 2;
                 if (divider * (divider.sign * middle) <= cur_dividend) {
@@ -447,22 +451,36 @@ private:
     BigInteger denominator=1;
 
     static BigInteger gcd(BigInteger a, BigInteger b) {
-        a *= a.get_sign();
-        b *= b.get_sign();
-        while (b) {
-            BigInteger a_copy(a);
-            a = b;
-            b = a_copy % b;
+        if (a == 0 || a == b) {
+            return b;
         }
-        return a;
+        if (b == 0) {
+            return a;
+        }
+        if (a == 1 || b == 1) {
+            return 1;
+        }
+        if (a % 2 == 0 && b % 2 == 0) {
+            return gcd(a / 2, b / 2) * 2;
+        }
+        while (a % 2 == 0) {
+            a /= 2;
+        }
+        while (b % 2 == 0) {
+            b /= 2;
+        }
+        if (a < b) {
+            return gcd((b - a) / 2, a);
+        }
+        return gcd((a - b) / 2, b);
     }
 
     void reconstructor() {
-        BigInteger reducer = gcd(numerator, denominator);
-        numerator /= reducer;
-        denominator /= reducer;
         numerator *= denominator.get_sign();
         denominator *= denominator.get_sign();
+        BigInteger reducer = gcd(numerator * numerator.get_sign(), denominator);
+        numerator /= reducer;
+        denominator /= reducer;
     }
 
 public:
