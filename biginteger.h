@@ -32,9 +32,10 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 class BigInteger {
 
 private:    
-    static const int power_of_radix=9;
-    static const int radix=1'000'000'000; //must be a power of ten.
+    static const int power_of_radix=6;
+    static const int radix=1000000; //must be a power of ten.
     std::vector<long long> rank;
+    int sign = 1;
 
     static int number_of_digits(int n, const int& radix) {
         if (n == 0) {
@@ -50,7 +51,7 @@ private:
         return cur_deg;
     }
 
-    static int sign_of_number(const int& n) {
+    static int sign_of_number(const long long& n) {
         if (n >= 0) return 1;
         return -1;
     }
@@ -77,34 +78,39 @@ private:
     void reconstructor() {
         carryover();
         delete_nulls();
-        int sign = 1;
         if (rank.size() && rank.back() < 0) {
-            sign = -1;
+            sign *= -1;
+            for (size_t i = 0; i < rank.size(); ++i) {
+                rank[i] *= -1;
+            }
         }
         size_t position = 0;
         while (position < rank.size()) {
-            if (sign_of_number(rank[position]) == sign || rank[position] == 0) {
+            if (rank[position] >= 0) {
                 ++position;
                 continue;
             }
-            rank[position] += radix * sign;
+            rank[position] += radix;
             ++position;
-            while (sign_of_number(rank[position]) != sign || rank[position] == 0) {
-                rank[position] += (radix - 1) * sign;
+            while (rank[position] <= 0) {
+                rank[position] += radix - 1;
                 ++position;
             }
-            rank[position] -= 1 * sign;
+            rank[position] -= 1;
             ++position;
         }
         delete_nulls();
+        if (rank.size() == 0) {
+            sign = 1;
+        }
     }
 
 public:
     BigInteger() = default;
 
-    BigInteger(int n) {
+    BigInteger(int n): sign(sign_of_number(n)) {
         while (n) {
-            rank.push_back(n % radix);
+            rank.push_back(abs(n % radix));
             n /= radix;
         }
     }
@@ -113,13 +119,6 @@ public:
 
     ~BigInteger() = default;
 
-    int sign() const {
-        if (rank.size() == 0) {
-            return 1;
-        }
-        return sign_of_number(rank.back());
-    }
-    
     int operator[] (const size_t& k) const {
         if (rank.size() <= k) {
             return 0;
@@ -131,12 +130,16 @@ public:
         return rank.size();
     }
 
+    int get_sign() const {
+        return sign;
+    }
+
     BigInteger& operator+= (const BigInteger& other) {
         while (rank.size() < other.size()) {
             rank.push_back(0);
         }
         for (size_t i = 0; i < rank.size(); ++i) {
-            rank[i] += other[i];
+            rank[i] += other[i] * other.sign * sign;
         }
         reconstructor();
         return *this;
@@ -155,6 +158,7 @@ public:
             }
             rank[i] -= start_value;
         }
+        sign *= other.sign;
         reconstructor();
         return *this;
     }
@@ -168,16 +172,13 @@ public:
             rank.push_back(0);
         }
         for (size_t i = 0; i < rank.size(); ++i) {
-            rank[i] -= other[i];
+            rank[i] -= other[i] * other.sign * sign;
         }
         reconstructor();
         return *this;
     }
-    //лишние копирования
+    
     BigInteger& operator/= (const BigInteger& divider) {
-        int divider_sign = divider.sign();
-        int self_sign = sign();
-        *this *= self_sign;
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
@@ -185,14 +186,14 @@ public:
             int right_board = radix;
             while (left_board + 1 != right_board) {
                 int middle = (left_board + right_board) / 2;
-                if (divider * middle * divider_sign <= cur_dividend) {
+                if (divider * (divider.sign * middle) <= cur_dividend) {
                     left_board = middle;
                 } else {
                     right_board = middle;
                 }
             }
             quotient.rank.push_back(left_board);
-            cur_dividend -= left_board * divider * divider_sign;
+            cur_dividend -= (left_board * divider.sign) * divider;
             if (i != 0) {
                 cur_dividend = cur_dividend * radix + rank[i - 1];
             }
@@ -200,14 +201,11 @@ public:
         for (size_t i = 0; i * 2 < quotient.size(); ++i) {
             std::swap(quotient.rank[i], quotient.rank[quotient.size() - i - 1]);
         }
-        *this = quotient * (divider_sign * self_sign);
+        *this = quotient * (divider.sign * sign);
         return *this;
     }
 
     BigInteger& operator%= (const BigInteger& divider) {
-        int divider_sign = divider.sign();
-        int self_sign = sign();
-        *this *= self_sign;
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {         
@@ -215,31 +213,31 @@ public:
             int right_board = radix;
             while (left_board + 1 != right_board) {
                 int middle = (left_board + right_board) / 2;
-                if (divider * middle * divider_sign <= cur_dividend) {
+                if (divider * (middle * divider.sign) <= cur_dividend) {
                     left_board = middle;
                 } else {
                     right_board = middle;
                 }
             }
-            cur_dividend -= left_board * divider * divider_sign;;
+            cur_dividend -= (left_board * divider.sign) * divider;
             if (i != 0) {
                 cur_dividend = cur_dividend * radix + rank[i - 1];
             }
         }
-        *this = cur_dividend * self_sign;
+        *this = cur_dividend * sign;
         return *this;
     }
 
     BigInteger& operator++() {
         size_t current_rank = 0;
-        if (sign() == 1) {
+        if (sign == 1) {
             while (current_rank < rank.size() && rank[current_rank] == radix - 1) {
                 rank[current_rank] = 0;
                 ++current_rank;
             }
         } else {
             while (current_rank < rank.size() && rank[current_rank] == 0) {
-                rank[current_rank] = -radix + 1;
+                rank[current_rank] = radix - 1;
                 ++current_rank;
             }
         }
@@ -258,7 +256,7 @@ public:
 
     BigInteger& operator--() {
         size_t current_rank = 0;
-        if (sign() == 1) {
+        if (sign == 1) {
             while (current_rank < rank.size() && rank[current_rank] == 0) {
                 rank[current_rank] = radix - 1;
                 ++current_rank;
@@ -287,17 +285,23 @@ public:
         if (rank.size() == 0) {
             return "0";
         }
-        if (rank.back() < 0) {
-            result = "-";
+        if (sign == -1) {
+            result += "-";
         }
         for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
             if (i != rank.size() - 1) {
                 result += std::string(power_of_radix - number_of_digits(rank[i], 10), '0');
             }
-            result += std::to_string(std::abs(rank[i]));
-            if (i == 0) break;
+            result += std::to_string(rank[i]);
         }
         return result;
+    }
+
+    void show_ranks() {
+        for (size_t i = rank.size() - 1; i + 1 != 0; ++i) {
+            std::cout << rank[i] << " ";
+        }
+        std::cout << '\n';
     }
 
     explicit operator bool() const {
@@ -310,7 +314,7 @@ public:
             result *= radix;
             result += rank[i];
         }
-        return result;
+        return result * sign;
     }
 
     friend std::istream& operator>> (std::istream& in, BigInteger& n);
@@ -323,20 +327,20 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
 
 std::istream& operator>> (std::istream& in, BigInteger& n) {
     n = 0;
-    int sign = 1;
+    int input_sign = 1;
     char c = in.get();
     while (isspace(c)) {
         c = in.get();
     }
     if (c == '-') {
-        sign = -1;
+        input_sign = -1;
     } else {
         n += (c - '0');
     }
     c = in.get();
     while (!isspace(c) && c != EOF) {
         n *= 10;
-        n += (c - '0') * sign;
+        n += (c - '0') * input_sign;
         c = in.get();
     } 
     return in;
@@ -373,8 +377,8 @@ BigInteger operator% (const BigInteger& n1, const BigInteger& n2) {
 }
 
 bool operator< (const BigInteger& n1, const BigInteger& n2) {
-    if (n1.sign() != n2.sign()) {
-        return n1.sign() < n2.sign();
+    if (n1.get_sign() != n2.get_sign()) {
+        return n1.get_sign() < n2.get_sign();
     }
     size_t  maxsize = std::max(n1.size(), n2.size());
     for (int i = maxsize - 1; i + 1 != 0; --i) {
@@ -385,6 +389,9 @@ bool operator< (const BigInteger& n1, const BigInteger& n2) {
 }
 
 bool operator== (const BigInteger& n1, const BigInteger& n2) {
+    if (n1.get_sign() != n2.get_sign()) {
+        return false;
+    }
     for (size_t rank = 0; rank < std::max(n1.size(), n2.size()); ++rank) {
         if (n1[rank] != n2[rank]) return false;
     } 
@@ -440,8 +447,8 @@ private:
     BigInteger denominator=1;
 
     static BigInteger gcd(BigInteger a, BigInteger b) {
-        a *= a.sign();
-        b *= b.sign();
+        a *= a.get_sign();
+        b *= b.get_sign();
         while (b) {
             BigInteger a_copy(a);
             a = b;
@@ -454,8 +461,8 @@ private:
         BigInteger reducer = gcd(numerator, denominator);
         numerator /= reducer;
         denominator /= reducer;
-        numerator *= denominator.sign();
-        denominator *= denominator.sign();
+        numerator *= denominator.get_sign();
+        denominator *= denominator.get_sign();
     }
 
 public:
@@ -514,8 +521,8 @@ public:
         if (numerator < 0) {
             result += "-";
         }
-        result += (numerator / denominator * numerator.sign()).toString() + ".";
-        BigInteger dividend = numerator % denominator * numerator.sign();
+        result += (numerator / denominator * numerator.get_sign()).toString() + ".";
+        BigInteger dividend = numerator % denominator * numerator.get_sign();
         for (size_t i = 0; i < precision; ++i) {
             result += (dividend * 10 / denominator).toString();
             dividend = dividend * 10 % denominator;
