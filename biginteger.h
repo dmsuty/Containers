@@ -31,7 +31,7 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 
 class BigInteger {
 
-private:    
+private:
     static const int power_of_radix=9;
     static const int radix=1'000'000'000; //must be a power of ten.
     std::vector<long long> rank;
@@ -43,7 +43,7 @@ private:
         }
         n = abs(n);
         int cur_deg = 0;
-        long long cur_pow = 1; 
+        long long cur_pow = 1;
         while (cur_pow <= n) {
             cur_pow *= radix;
             ++cur_deg;
@@ -149,23 +149,27 @@ public:
         if (other == 0) {
             return *this = 0;
         }
-        int self_size = rank.size();
-        while ((int)rank.size() < (int)self_size + (int)other.size()) {
+        size_t self_size = rank.size();
+        while (rank.size() < self_size + other.size() - 1) {
             rank.push_back(0);
         }
-        std::cout << rank.size() << " rank.size()" << '\n';
-        for (int i = static_cast<int>(rank.size()) - 2; i >= 0; --i) {
+        for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
             int start_value = rank[i];
-            for (int j1 = i; j1 >= 0; --j1) {
-                int j2 = i - j1;
-                if (j2 == (int)other.size()) {
+            for (size_t j1 = i; j1 + 1 != 0; --j1) {
+                size_t j2 = i - j1;
+                if (j2 == other.size()) {
                     break;
                 }
                 rank[i] += rank[j1] * other[j2];
-                if (rank[i] >= radix) {
-                    int carry = rank[i] / radix;
-                    rank[i] %= radix;
-                    rank[i + 1] += carry;
+                size_t j = i;
+                while (rank[j] >= radix) {
+                    int carry = rank[j] / radix;
+                    rank[j] %= radix;
+                    ++j;
+                    if (j == rank.size()) {
+                        rank.push_back(0);
+                    }
+                    rank[j] += carry;
                 }
             }
             rank[i] -= start_value;
@@ -189,11 +193,11 @@ public:
         reconstructor();
         return *this;
     }
-    
+
     BigInteger& operator/= (const BigInteger& divider) {
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
-        for (size_t i = rank.size(); i + 1 != 0; --i) {         
+        for (size_t i = rank.size(); i + 1 != 0; --i) {
             long long high_digits = 0;
             for (int j = (int)cur_dividend.size() - 1; j >= (int)divider.size() - 1; --j) {
                 high_digits = high_digits * radix + cur_dividend[j];
@@ -224,7 +228,7 @@ public:
     BigInteger& operator%= (const BigInteger& divider) {
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
-        for (size_t i = rank.size(); i + 1 != 0; --i) {         
+        for (size_t i = rank.size(); i + 1 != 0; --i) {
             int left_board = 0;
             int right_board = radix;
             while (left_board + 1 != right_board) {
@@ -358,7 +362,7 @@ std::istream& operator>> (std::istream& in, BigInteger& n) {
         n *= 10;
         n += (c - '0') * input_sign;
         c = in.get();
-    } 
+    }
     return in;
 }
 
@@ -410,7 +414,7 @@ bool operator== (const BigInteger& n1, const BigInteger& n2) {
     }
     for (size_t rank = 0; rank < std::max(n1.size(), n2.size()); ++rank) {
         if (n1[rank] != n2[rank]) return false;
-    } 
+    }
     return true;
 }
 
@@ -438,7 +442,7 @@ bool operator< (const Rational& n1, const Rational& n2);
 bool operator== (const Rational& n1, const Rational& n2);
 
 bool operator> (const Rational& n1, const Rational& n2);
- 
+
 bool operator!= (const Rational& n1, const Rational& n2);
 
 bool operator<= (const Rational& n1, const Rational& n2);
@@ -457,7 +461,7 @@ std::ostream& operator<< (std::ostream& out, const Rational& n);
 
 
 class Rational {
-    
+
 private:
     BigInteger numerator=0;
     BigInteger denominator=1;
