@@ -43,7 +43,7 @@ private:
         }
         n = abs(n);
         int cur_deg = 0;
-        int cur_pow = 1; 
+        long long cur_pow = 1; 
         while (cur_pow <= n) {
             cur_pow *= radix;
             ++cur_deg;
@@ -63,9 +63,9 @@ private:
     }
 
     void carryover() {
-        int carry = 0;
+        long long carry = 0;
         for (size_t i = 0; i < rank.size(); ++i) {
-            int new_carry = (rank[i] + carry) / radix;
+            long long new_carry = (rank[i] + carry) / radix;
             rank[i] = (rank[i] + carry) % radix;
             carry = new_carry;
         }
@@ -146,15 +146,27 @@ public:
     }
 
     BigInteger& operator*= (const BigInteger& other) {
+        if (other == 0) {
+            return *this = 0;
+        }
         int self_size = rank.size();
-        while ((int)rank.size() < (int)self_size + (int)other.size() - 1) {
+        while ((int)rank.size() < (int)self_size + (int)other.size()) {
             rank.push_back(0);
         }
-        for (int i = rank.size() - 1; i >= 0; --i) {
+        std::cout << rank.size() << " rank.size()" << '\n';
+        for (int i = static_cast<int>(rank.size()) - 2; i >= 0; --i) {
             int start_value = rank[i];
             for (int j1 = i; j1 >= 0; --j1) {
                 int j2 = i - j1;
+                if (j2 == (int)other.size()) {
+                    break;
+                }
                 rank[i] += rank[j1] * other[j2];
+                if (rank[i] >= radix) {
+                    int carry = rank[i] / radix;
+                    rank[i] %= radix;
+                    rank[i + 1] += carry;
+                }
             }
             rank[i] -= start_value;
         }
@@ -302,7 +314,7 @@ public:
     }
 
     void show_ranks() {
-        for (size_t i = rank.size() - 1; i + 1 != 0; ++i) {
+        for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
             std::cout << rank[i] << " ";
         }
         std::cout << '\n';
@@ -627,4 +639,3 @@ std::ostream& operator<< (std::ostream& out, const Rational& n) {
     out << n.toString();
     return out;
 }
-
