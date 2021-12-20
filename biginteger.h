@@ -419,7 +419,7 @@ bool operator== (const BigInteger& n1, const BigInteger& n2) {
 }
 
 bool operator> (const BigInteger& n1, const BigInteger& n2) {
-    return !(n1 < n2) && !(n1 == n2);
+    return n2 < n1;
 }
 
 bool operator!= (const BigInteger& n1, const BigInteger& n2) {
@@ -600,7 +600,7 @@ bool operator== (const Rational& a, const Rational& b) {
 }
 
 bool operator> (const Rational& a, const Rational& b) {
-    return !(a < b) && !(a == b);
+    return b < a;
 }
 
 bool operator!= (const Rational& a, const Rational& b) {
