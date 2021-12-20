@@ -5,9 +5,9 @@ class String;
 
 String operator+ (const String& s1, const String& s2);
 
-String operator+ (const String& s, const char& c);
+String operator+ (const String& s, char c);
 
-String operator+ (const char& c, const String& s);
+String operator+ (char c, const String& s);
 
 bool operator== (const String& s1, const String& s2);
 
@@ -41,7 +41,7 @@ private:
         std::swap(str, s.str);
         std::swap(capacity, s.capacity);
     }
- 
+
 public:
     String(): str(new char[1]), sz(0), capacity(1) {}
 
@@ -50,7 +50,7 @@ public:
         memcpy(str, s, sz);
     }
 
-    String(const size_t& new_sz, const char& c):
+    String(const size_t& new_sz, char c):
         str(new char[new_sz * 2]), sz(new_sz), capacity(new_sz * 2 + 1) {
         memset(str, c, new_sz);
     }
@@ -69,7 +69,7 @@ public:
         return *this;
     }
 
-    void push_back(const char& c) {
+    void push_back(char c) {
         if (capacity == sz) {
             doubling();
         }
@@ -84,7 +84,7 @@ public:
         --sz;
     }
 
-    String& operator+= (const char& c) {
+    String& operator+= (char c) {
         push_back(c);
         return *this;
     }
@@ -178,12 +178,12 @@ String operator+(const String& s1, const String& s2) {
 }
 
 
-String operator+(const String& s, const char& c) {
+String operator+(const String& s, char c) {
     return s + String(1, c);
 }
 
 
-String operator+(const char& c, const String& s) {
+String operator+(char c, const String& s) {
     return String(1, c) + s;
 }
 
@@ -200,6 +200,11 @@ bool operator==(const String& s1, const String& s2) {
         }
     }
     return equil;
+}
+
+
+bool operator!=(const String& s1, const String& s2) {
+    return !(s1 == s2);
 }
 
 
