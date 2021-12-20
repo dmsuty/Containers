@@ -502,7 +502,7 @@ private:
 public:
     Rational() = default;
 
-    Rational(const int& n): numerator(n) {};
+    Rational(int n): numerator(n) {};
 
     Rational(const BigInteger& n): numerator(n) {};
 
