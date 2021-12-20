@@ -427,11 +427,11 @@ bool operator!= (const BigInteger& n1, const BigInteger& n2) {
 }
 
 bool operator<= (const BigInteger& n1, const BigInteger& n2) {
-    return n1 < n2 || n1 == n2;
+    return !(n1 > n2);
 }
 
 bool operator>= (const BigInteger& n1, const BigInteger& n2) {
-    return n1 > n2 || n1 == n2;
+    return !(n1 < n2);
 }
 
 
