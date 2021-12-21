@@ -348,20 +348,20 @@ std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
 std::istream& operator>> (std::istream& in, BigInteger& n) {
     n = 0;
     int input_sign = 1;
-    char c = in.get();
-    while (isspace(c)) {
-        c = in.get();
+    char symbol = in.get();
+    while (isspace(symbol)) {
+        symbol= in.get();
     }
-    if (c == '-') {
+    if (symbol == '-') {
         input_sign = -1;
     } else {
-        n += (c - '0');
+        n += symbol - '0';
     }
-    c = in.get();
-    while (!isspace(c) && c != EOF) {
+    symbol = in.get();
+    while (!isspace(symbol) && symbol != EOF) {
         n *= 10;
-        n += (c - '0') * input_sign;
-        c = in.get();
+        n += (symbol - '0') * input_sign;
+        symbol = in.get();
     }
     return in;
 }
@@ -578,25 +578,22 @@ public:
         return result;
     }
 
-    friend bool operator< (const Rational& a, const Rational& b);
+    BigInteger get_numerator() const {
+        return numerator;
+    }
 
-    friend bool operator== (const Rational& a, const Rational& b);
+    BigInteger get_denominator() const {
+        return denominator;
+    }
 
-    friend bool operator> (const Rational& a, const Rational& b);
-
-    friend bool operator!= (const Rational& a, const Rational& b);
-
-    friend bool operator<= (const Rational& a, const Rational& b);
-
-    friend bool operator>= (const Rational& a, const Rational& b);
 };
 
 bool operator< (const Rational& a, const Rational& b) {
-    return a.numerator * b.denominator < b.numerator * a.denominator;
+    return a.get_numerator() * b.get_denominator() < b.get_numerator() * a.get_denominator();
 }
 
 bool operator== (const Rational& a, const Rational& b) {
-    return a.numerator * b.denominator == b.numerator * a.denominator;
+    return a.get_numerator() * b.get_denominator() == b.get_numerator() * a.get_denominator();
 }
 
 bool operator> (const Rational& a, const Rational& b) {
