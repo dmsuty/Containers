@@ -20,20 +20,21 @@ private:
     size_t sz;
     size_t capacity;
 
-    void doubling() {
-        capacity *= 2;
+    void make_new_capacity() {
         char* new_str = new char[capacity];
         memcpy(new_str, str, sz);
         delete[] str;
         str = new_str;
     }
 
+    void doubling() {
+        capacity *= 2;
+        make_new_capacity();
+    }
+
     void halve() {
         capacity /= 2;
-        char* new_str = new char[capacity];
-        memcpy(new_str, str, sz);
-        delete[] str;
-        str = new_str;
+        make_new_capacity();
     }
 
     void swap(String &s) {
