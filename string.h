@@ -14,15 +14,15 @@ bool operator== (const String &first, const String &second);
 class String {
 
 private:
-    char* str;
     size_t size;
     size_t capacity;
+    char* data;
 
     void make_new_capacity() {
         char* new_str = new char[capacity];
-        memcpy(new_str, str, size);
-        delete[] str;
-        str = new_str;
+        memcpy(new_str, data, size);
+        delete[] data;
+        data = new_str;
     }
 
     void doubling() {
@@ -37,28 +37,28 @@ private:
 
     void swap(String &other) {
         std::swap(size, other.size);
-        std::swap(str, other.str);
+        std::swap(data, other.data);
         std::swap(capacity, other.capacity);
     }
 
 public:
-    String(): str(new char[1]), size(0), capacity(1) {}
+    String(): size(0), capacity(1), data(new char[1]) {}
 
     String(size_t new_size, char symbol):
-        str(new char[new_size * 2]), size(new_size), capacity(new_size * 2 + 1) {
-        memset(str, symbol, new_size);
+        size(new_size), capacity(size * 2 + 1), data(new char[capacity]) {
+        memset(data, symbol, new_size);
     }
 
     String(const char* c_string): String(strlen(c_string), '0') {
-        memcpy(str, c_string, size);
+        memcpy(data, c_string, size);
     }
 
-    String(const String &other): String(other.size, '\0') {
-        memcpy(str, other.str, size);
+    String(const String &other): String(other.size, '0') {
+        memcpy(data, other.data, size);
     }
 
     ~String() {
-        delete[] str;
+        delete[] data;
     }
 
     String& operator=(const String &other) {
@@ -71,7 +71,7 @@ public:
         if (capacity == size) {
             doubling();
         }
-        str[size] = symbol;
+        data[size] = symbol;
         ++size;
     }
 
@@ -90,33 +90,33 @@ public:
     String& operator+= (const String &other) {
         size_t start_size = other.size;
         for (size_t i = 0; i < start_size; ++i) {
-            *this += other.str[i];
+            *this += other.data[i];
         }
         return *this;
     }
 
     char& operator[] (size_t i) {
-        return str[i];
+        return data[i];
     }
 
     const char& operator[] (size_t i) const {
-        return str[i];
+        return data[i];
     }
 
     char& front() {
-        return str[0];
+        return data[0];
     }
 
     const char& front() const {
-        return str[0];
+        return data[0];
     }
 
     char& back() {
-        return str[size - 1];
+        return data[size - 1];
     }
 
     const char& back() const {
-        return str[size - 1];
+        return data[size - 1];
     }
 
     size_t length() const {
@@ -133,7 +133,7 @@ public:
 
     String substr(size_t start, size_t count) const {
         String substring(count, '0');
-        memcpy(substring.str, str + start, count);
+        memcpy(substring.data, data + start, count);
         return substring;
     }
 

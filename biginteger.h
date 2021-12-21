@@ -337,7 +337,6 @@ public:
         return result * sign;
     }
 
-    friend std::istream& operator>> (std::istream& in, BigInteger& n);
 };
 
 std::ostream& operator<< (std::ostream& out, const BigInteger& n) {
