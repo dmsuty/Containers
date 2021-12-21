@@ -3,26 +3,24 @@
 
 class String;
 
-String operator+ (const String& s1, const String& s2);
+String operator+ (const String &first, const String &second);
 
-String operator+ (const String& s, char c);
+String operator+ (const String &other, char symbol);
 
-String operator+ (char c, const String& s);
+String operator+ (char symbol, const String &other);
 
-bool operator== (const String& s1, const String& s2);
-
-size_t c_string_size(const char* s);
+bool operator== (const String &first, const String &second);
 
 class String {
 
 private:
     char* str;
-    size_t sz;
+    size_t size;
     size_t capacity;
 
     void make_new_capacity() {
         char* new_str = new char[capacity];
-        memcpy(new_str, str, sz);
+        memcpy(new_str, str, size);
         delete[] str;
         str = new_str;
     }
@@ -37,72 +35,71 @@ private:
         make_new_capacity();
     }
 
-    void swap(String &s) {
-        std::swap(sz, s.sz);
-        std::swap(str, s.str);
-        std::swap(capacity, s.capacity);
+    void swap(String &other) {
+        std::swap(size, other.size);
+        std::swap(str, other.str);
+        std::swap(capacity, other.capacity);
     }
 
 public:
-    String(): str(new char[1]), sz(0), capacity(1) {}
+    String(): str(new char[1]), size(0), capacity(1) {}
 
-    String(const char* s):
-    str(new char[c_string_size(s) * 2]), sz(c_string_size(s)), capacity(c_string_size(s) * 2 + 1) {
-        memcpy(str, s, sz);
+    String(size_t new_size, char symbol):
+        str(new char[new_size * 2]), size(new_size), capacity(new_size * 2 + 1) {
+        memset(str, symbol, new_size);
     }
 
-    String(const size_t& new_sz, char c):
-        str(new char[new_sz * 2]), sz(new_sz), capacity(new_sz * 2 + 1) {
-        memset(str, c, new_sz);
+    String(const char* c_string): String(strlen(c_string), '0') {
+        memcpy(str, c_string, size);
     }
 
-    String(const String& s): String(s.sz, '\0') {
-        memcpy(str, s.str, sz);
+    String(const String &other): String(other.size, '\0') {
+        memcpy(str, other.str, size);
     }
 
     ~String() {
         delete[] str;
     }
 
-    String& operator=(const String& s) {
-        String copy = s;
+    String& operator=(const String &other) {
+        String copy(other);
         swap(copy);
         return *this;
     }
 
-    void push_back(char c) {
-        if (capacity == sz) {
+    void push_back(char symbol) {
+        if (capacity == size) {
             doubling();
         }
-        str[sz] = c;
-        ++sz;
+        str[size] = symbol;
+        ++size;
     }
 
     void pop_back() {
-        if (sz * 4 <= capacity) {
+        if (size * 4 <= capacity) {
             halve();
         }
-        --sz;
+        --size;
     }
 
-    String& operator+= (char c) {
-        push_back(c);
+    String& operator+= (char symbol) {
+        push_back(symbol);
         return *this;
     }
 
-    String& operator+= (const String &s) {
-        size_t start_size = s.sz;
+    String& operator+= (const String &other) {
+        size_t start_size = other.size;
         for (size_t i = 0; i < start_size; ++i) {
-            *this += s.str[i];
+            *this += other.str[i];
         }
         return *this;
     }
 
-    char& operator[] (const size_t& i) {
+    char& operator[] (size_t i) {
         return str[i];
     }
 
-    const char& operator[] (const size_t& i) const {
+    const char& operator[] (size_t i) const {
         return str[i];
     }
 
@@ -115,87 +112,76 @@ public:
     }
 
     char& back() {
-        return str[sz - 1];
+        return str[size - 1];
     }
 
     const char& back() const {
-        return str[sz - 1];
+        return str[size - 1];
     }
 
     size_t length() const {
-        return sz;
+        return size;
     }
 
     bool empty() const {
-        return sz == 0;
+        return size == 0;
     }
 
     void clear() {
         *this = String();
     }
 
-    String substr(const size_t& start, const size_t& count) const {
+    String substr(size_t start, size_t count) const {
         String substring(count, '0');
         memcpy(substring.str, str + start, count);
         return substring;
     }
 
-    size_t find(const String& substring) const {
-        for (int i = 0; i + substring.sz <= sz; ++i) {
-            if (substr(i, substring.sz) == substring) {
+    size_t find(const String &substring) const {
+        for (int i = 0; i + substring.size <= size; ++i) {
+            if (substr(i, substring.size) == substring) {
                 return i;
             }
         }
-        return sz;
+        return size;
     }
 
-    size_t rfind(const String& substring) const {
-        int ret = sz;
-        for (int i = 0; i + substring.sz <= sz; ++i) {
-            if (substr(i, substring.sz) == substring) {
-                ret = i;
+    size_t rfind(const String &substring) const {
+        int result = size;
+        for (int i = 0; i + substring.size <= size; ++i) {
+            if (substr(i, substring.size) == substring) {
+                result = i;
             }
         }
-        return ret;
+        return result;
     }
-
-    friend std::istream& operator>> (std::istream& in, const String& point);
 };
 
 
-size_t c_string_size(const char* s) {
-    size_t ret = 0;
-    while (s[ret] != '\0') {
-        ++ret;
-    }
-    return ret;
-}
-
-
-String operator+(const String& s1, const String& s2) {
-    String sum(s1);
-    sum += s2;
+String operator+(const String &first, const String &second) {
+    String sum(first);
+    sum += second;
     return sum;
 }
 
 
-String operator+(const String& s, char c) {
-    return s + String(1, c);
+String operator+(const String &other, char symbol) {
+    return other + String(1, symbol);
 }
 
 
-String operator+(char c, const String& s) {
-    return String(1, c) + s;
+String operator+(char symbol, const String &other) {
+    return String(1, symbol) + other;
 }
 
 
-bool operator==(const String& s1, const String& s2) {
-    if (s1.length() != s2.length()) {
+bool operator==(const String &first, const String &second) {
+    if (first.length() != second.length()) {
         return false;
     }
     bool equil = true;
-    for (size_t i = 0; i < s1.length(); ++i) {
-        if (s1[i] != s2[i]) {
+    for (size_t i = 0; i < first.length(); ++i) {
+        if (first[i] != second[i]) {
             equil = false;
             break;
         }
@@ -204,28 +190,28 @@ bool operator==(const String& s1, const String& s2) {
 }
 
 
-bool operator!=(const String& s1, const String& s2) {
-    return !(s1 == s2);
+bool operator!=(const String &first, const String &second) {
+    return !(first == second);
 }
 
 
-std::ostream& operator<< (std::ostream& out, const String& s) {
-    for (size_t i = 0; i < s.length(); ++i) {
-        out << s[i];
+std::ostream& operator<< (std::ostream &out, const String &string) {
+    for (size_t i = 0; i < string.length(); ++i) {
+        out << string[i];
     }
     return out;
 }
 
 
-std::istream& operator>> (std::istream& in, String& s) {
-    s.clear();
-    char c = in.get();
-    while (isspace(c)) {
-        c = in.get();
+std::istream& operator>> (std::istream &in, String &string) {
+    string.clear();
+    char symbol = in.get();
+    while (isspace(symbol)) {
+        symbol = in.get();
     }
-    while (!isspace(c) && c != EOF  ) {
-        s.push_back(c);
-        c = in.get();
+    while (!isspace(symbol) && symbol != EOF) {
+        string.push_back(symbol);
+        symbol = in.get();
     }
     return in;
 }
