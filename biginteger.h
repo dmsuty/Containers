@@ -608,11 +608,11 @@ bool operator!= (const Rational& a, const Rational& b) {
 }
 
 bool operator<= (const Rational& a, const Rational& b) {
-    return a < b || a == b;
+    return !(a > b);
 }
 
 bool operator>= (const Rational& a, const Rational& b) {
-    return a == b || a > b;
+    return !(a < b);
 }
 
 Rational operator+ (const Rational& a, const Rational& b) {
