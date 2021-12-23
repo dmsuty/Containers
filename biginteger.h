@@ -5,27 +5,27 @@
 
 class BigInteger;
 
-bool operator< (const BigInteger& n1, const BigInteger& n2);
+bool operator< (const BigInteger& first, const BigInteger& second);
 
-bool operator== (const BigInteger& n1, const BigInteger& n2);
+bool operator== (const BigInteger& first, const BigInteger& second);
 
-bool operator> (const BigInteger& n1, const BigInteger& n2);
+bool operator> (const BigInteger& first, const BigInteger& second);
 
-bool operator!= (const BigInteger& n1, const BigInteger& n2);
+bool operator!= (const BigInteger& first, const BigInteger& second);
 
-bool operator<= (const BigInteger& n1, const BigInteger& n2);
+bool operator<= (const BigInteger& first, const BigInteger& second);
 
-bool operator>= (const BigInteger& n1, const BigInteger& n2);
+bool operator>= (const BigInteger& first, const BigInteger& second);
 
-BigInteger operator+ (const BigInteger& n1, const BigInteger& n2);
+BigInteger operator+ (const BigInteger& first, const BigInteger& second);
 
-BigInteger operator- (const BigInteger& n1, const BigInteger& n2);
+BigInteger operator- (const BigInteger& first, const BigInteger& second);
 
-BigInteger operator* (const BigInteger& n1, const BigInteger& n2);
+BigInteger operator* (const BigInteger& first, const BigInteger& second);
 
-BigInteger operator/ (const BigInteger& n1, const BigInteger& n2);
+BigInteger operator/ (const BigInteger& first, const BigInteger& second);
 
-BigInteger operator% (const BigInteger& n1, const BigInteger& n2);
+BigInteger operator% (const BigInteger& first, const BigInteger& second);
 
 std::ostream& operator<< (std::ostream& out, const BigInteger& n);
 
@@ -198,12 +198,8 @@ public:
         BigInteger quotient(0);
         BigInteger cur_dividend(0);
         for (size_t i = rank.size(); i + 1 != 0; --i) {
-            long long high_digits = 0;
-            for (int j = (int)cur_dividend.size() - 1; j >= (int)divider.size() - 1; --j) {
-                high_digits = high_digits * radix + cur_dividend[j];
-            }
-            int left_board = high_digits / (divider.rank.back() + 1);
-            int right_board = high_digits / divider.rank.back() + 1;
+            int left_board = 0;
+            int right_board = radix;
             while (left_board + 1 != right_board) {
                 int middle = (left_board + right_board) / 2;
                 if (divider * (divider.sign * middle) <= cur_dividend) {
@@ -248,53 +244,51 @@ public:
         return *this;
     }
 
-    BigInteger& operator++() {
+    BigInteger& operator++ () {
         size_t current_rank = 0;
-        if (sign == 1) {
-            while (current_rank < rank.size() && rank[current_rank] == radix - 1) {
-                rank[current_rank] = 0;
-                ++current_rank;
-            }
-        } else {
-            while (current_rank < rank.size() && rank[current_rank] == 0) {
-                rank[current_rank] = radix - 1;
-                ++current_rank;
-            }
+        int carry_value = radix - 1;
+        int after_carry_value = 0;
+        if (sign == -1) {
+            std::swap(carry_value, after_carry_value);
+        }
+        while (current_rank < rank.size() && rank[current_rank] == carry_value) {
+            rank[current_rank] = after_carry_value;
+            ++current_rank;
         }
         if (current_rank == rank.size()) {
             rank.push_back(0);
         }
-        ++rank[current_rank];
+        rank[current_rank] += sign;
+        if (rank.back() == 0) rank.pop_back();
         return *this;
     }
 
-    BigInteger operator ++(int) {
+    BigInteger operator++ (int) {
         BigInteger result(*this);
         ++(*this);
         return result;
     }
 
-    BigInteger& operator--() {
+    BigInteger& operator-- () {
         size_t current_rank = 0;
-        if (sign == 1) {
-            while (current_rank < rank.size() && rank[current_rank] == 0) {
-                rank[current_rank] = radix - 1;
-                ++current_rank;
-            }
-        } else {
-            while (current_rank < rank.size() && rank[current_rank] == -radix + 1) {
-                rank[current_rank] = 0;
-                ++current_rank;
-            }
+        int carry_value = 0;
+        int after_carry_value = radix - 1;
+        if (sign == -1) {
+            std::swap(carry_value, after_carry_value);
+        }
+        while (current_rank < rank.size() && rank[current_rank] == carry_value) {
+            rank[current_rank] = after_carry_value;
+            ++current_rank;
         }
         if (current_rank == rank.size()) {
             rank.push_back(0);
         }
-        --rank[current_rank];
+        rank[current_rank] -= sign;
+        if (rank.back() == 0) rank.pop_back();
         return *this;
     }
 
-    BigInteger operator --(int) {
+    BigInteger operator-- (int) {
         BigInteger result(*this);
         --(*this);
         return result;
@@ -315,13 +309,6 @@ public:
             result += std::to_string(rank[i]);
         }
         return result;
-    }
-
-    void show_ranks() {
-        for (size_t i = rank.size() - 1; i + 1 != 0; --i) {
-            std::cout << rank[i] << " ";
-        }
-        std::cout << '\n';
     }
 
     explicit operator bool() const {
@@ -365,96 +352,96 @@ std::istream& operator>> (std::istream& in, BigInteger& n) {
     return in;
 }
 
-BigInteger operator+ (const BigInteger& n1, const BigInteger& n2) {
-    BigInteger sum(n1);
-    sum += n2;
+BigInteger operator+ (const BigInteger& first, const BigInteger& second) {
+    BigInteger sum(first);
+    sum += second;
     return sum;
 }
 
-BigInteger operator- (const BigInteger& n1, const BigInteger& n2) {
-    BigInteger difference(n1);
-    difference -= n2;
+BigInteger operator- (const BigInteger& first, const BigInteger& second) {
+    BigInteger difference(first);
+    difference -= second;
     return difference;
 }
 
-BigInteger operator* (const BigInteger& n1, const BigInteger& n2) {
-    BigInteger product(n1);
-    product *= n2;
+BigInteger operator* (const BigInteger& first, const BigInteger& second) {
+    BigInteger product(first);
+    product *= second;
     return product;
 }
 
-BigInteger operator/ (const BigInteger& n1, const BigInteger& n2) {
-    BigInteger division_result = BigInteger(n1);
-    division_result /= n2;
+BigInteger operator/ (const BigInteger& first, const BigInteger& second) {
+    BigInteger division_result = BigInteger(first);
+    division_result /= second;
     return division_result;
 }
 
-BigInteger operator% (const BigInteger& n1, const BigInteger& n2) {
-    BigInteger mod = BigInteger(n1);
-    mod %= n2;
+BigInteger operator% (const BigInteger& first, const BigInteger& second) {
+    BigInteger mod = BigInteger(first);
+    mod %= second;
     return mod;
 }
 
-bool operator< (const BigInteger& n1, const BigInteger& n2) {
-    if (n1.get_sign() != n2.get_sign()) {
-        return n1.get_sign() < n2.get_sign();
+bool operator< (const BigInteger& first, const BigInteger& second) {
+    if (first.get_sign() != second.get_sign()) {
+        return first.get_sign() < second.get_sign();
     }
-    size_t  maxsize = std::max(n1.size(), n2.size());
+    size_t  maxsize = std::max(first.size(), second.size());
     for (int i = maxsize - 1; i + 1 != 0; --i) {
-        if (n1[i] == n2[i]) continue;
-        return n1[i] < n2[i];
+        if (first[i] == second[i]) continue;
+        return first[i] < second[i];
     }
     return false;
 }
 
-bool operator== (const BigInteger& n1, const BigInteger& n2) {
-    if (n1.get_sign() != n2.get_sign()) {
+bool operator== (const BigInteger& first, const BigInteger& second) {
+    if (first.get_sign() != second.get_sign()) {
         return false;
     }
-    for (size_t rank = 0; rank < std::max(n1.size(), n2.size()); ++rank) {
-        if (n1[rank] != n2[rank]) return false;
+    for (size_t rank = 0; rank < std::max(first.size(), second.size()); ++rank) {
+        if (first[rank] != second[rank]) return false;
     }
     return true;
 }
 
-bool operator> (const BigInteger& n1, const BigInteger& n2) {
-    return n2 < n1;
+bool operator> (const BigInteger& first, const BigInteger& second) {
+    return second < first;
 }
 
-bool operator!= (const BigInteger& n1, const BigInteger& n2) {
-    return !(n1 == n2);
+bool operator!= (const BigInteger& first, const BigInteger& second) {
+    return !(first == second);
 }
 
-bool operator<= (const BigInteger& n1, const BigInteger& n2) {
-    return !(n1 > n2);
+bool operator<= (const BigInteger& first, const BigInteger& second) {
+    return !(first > second);
 }
 
-bool operator>= (const BigInteger& n1, const BigInteger& n2) {
-    return !(n1 < n2);
+bool operator>= (const BigInteger& first, const BigInteger& second) {
+    return !(first < second);
 }
 
 
 class Rational;
 
-bool operator< (const Rational& n1, const Rational& n2);
+bool operator< (const Rational& first, const Rational& second);
 
-bool operator== (const Rational& n1, const Rational& n2);
+bool operator== (const Rational& first, const Rational& second);
 
-bool operator> (const Rational& n1, const Rational& n2);
+bool operator> (const Rational& first, const Rational& second);
 
-bool operator!= (const Rational& n1, const Rational& n2);
+bool operator!= (const Rational& first, const Rational& second);
 
-bool operator<= (const Rational& n1, const Rational& n2);
+bool operator<= (const Rational& first, const Rational& second);
 
-bool operator>= (const Rational& n1, const Rational& n2);
+bool operator>= (const Rational& first, const Rational& second);
 
-Rational operator+ (const Rational& n1, const Rational& n2);
+Rational operator+ (const Rational& first, const Rational& second);
 
-Rational operator- (const Rational& n1, const Rational& n2);
+Rational operator- (const Rational& first, const Rational& second);
 
-Rational operator* (const Rational& n1, const Rational& n2);
+Rational operator* (const Rational& first, const Rational& second);
 
-Rational operator/ (const Rational& n1, const Rational& n2);
+Rational operator/ (const Rational& first, const Rational& second);
 
 std::ostream& operator<< (std::ostream& out, const Rational& n);
 
