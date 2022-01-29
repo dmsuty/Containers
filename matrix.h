@@ -7,56 +7,86 @@
 #include "biginteger.h"
 
 
-template<int N, int K>
-class Is_prime_helper {
-    //static const bool value = N % K == 0 && 
-};
+template<typename Type>
+Type operator+ (const Type& first, const Type& second) {
+    Type result(first);
+    result += second;
+    return result;
+}
 
+template<typename Type>
+Type operator- (const Type& first, const Type& second) {
+    Type result(first);
+    result -= second;
+    return result;
+}
+
+template<typename Type>
+Type operator* (const Type& first, const Type& second) {
+    Type result(first);
+    result *= second;
+    return result;
+}
+
+template<typename Type>
+Type operator/ (const Type& first, const Type& second) {
+    Type result(first);
+    result /= second;
+    return result;
+}
+
+template<int N, int K=2>
+class Is_prime_helper {
+    static const bool value = (K * K > N) || (N % K != 0 && Is_prime_helper<N, K + 1>::value);
+};
 
 template<size_t N>
 class Residue {
 private:
     size_t value=0;
- 
+    static const bool is_prime = Is_prime_helper<N>::value;
+
 public:
     Residue() = default; //почему нельзя без этого
 
-    explicit Residue(int number): value((N + number % N) % N) {} 
+    explicit Residue(int number): value((N + number % N) % N) {}
 
     Residue& operator+= (const Residue& other) {
         value += other.value;
         value %= N;
         return *this;
     }
-  
+
     Residue& operator-= (const Residue& other) {
         value += N - other.value;
         value %= N;
         return *this;
-    } 
- 
+    }
+
     Residue& operator*= (const Residue& other) {
         value *= other.value;
         value %= N;
         return *this;
-    }    
- 
+    }
+
     Residue power(size_t power_value) const {
+        Residue result(*this);
         if (!power_value) {
             return *this;
         }
         if (power_value % 2 == 0) {
-            return power(power_value / 2) * power(power_value / 2); 
+            return power(power_value / 2) * power(power_value / 2);
         }
         return *this * power(power_value - 1);
     }
- 
+
     Residue& operator/= (const Residue& other) {
+        static_assert(!is_prime, "can divide only prime fields");
         *this *= other.power(N - 2);
         return *this;
     }
 
-    explicit operator int() {
+    explicit operator int() const {
         return value;
     }
 };
@@ -67,5 +97,5 @@ class Matrix {
 private:
 
 public:
-    
+
 };
