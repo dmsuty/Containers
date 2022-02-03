@@ -1,11 +1,9 @@
-/*
-как делать так, чтобы деления для непростых давало CE
-*/
-
 #include <iostream>
 #include <vector>
 #include "biginteger.h"
 
+const static char* BAD_DIVISION = "You can divide only prime fields";
+const static char* BAD_ADDITION = "You can't stack matrices of different sizes.";
 
 template<typename Type>
 Type operator+ (const Type& first, const Type& second) {
@@ -58,12 +56,12 @@ struct Square_helper<1> {
 
 template<size_t N>
 class Residue {
-public: //должно быть private
+private:
     size_t value=0;
     static const bool is_prime = Is_prime_helper<N, Square_helper<N>::square>::value;
 
 public:
-    Residue() = default; //почему нельзя без этого
+    Residue() = default;
 
     explicit Residue(int number): value((N + number % N) % N) {}
 
@@ -97,7 +95,7 @@ public:
     }
 
     Residue& operator/= (const Residue& other) {
-        static_assert(is_prime, "can divide only prime fields");
+        static_assert(is_prime, "You can divide only prime fields");
         *this *= other.power(N - 2);
         return *this;
     }
@@ -111,7 +109,65 @@ public:
 template<size_t Height, size_t Width, typename Field=Rational>
 class Matrix {
 private:
-
+    static const size_t height = Height;
+    static const size_t width = Width;
+    std::vector<std::vector<Field> > matrix(height, width);
 public:
+    Matrix& operator+= (const Matrix& other) {
+        static_assert(height == other.height && width == other.width, "You can't stack matrices of different sizes.");
+        for (int i = 0; i < height; ++i) {
+            for (int j = 0; j < width; ++j) {
+                matrix[i][j] += other[i][j];
+            }
+        }
+        return this;
+    }
 
+    Matrix& operator-= (const Matrix& other) {
+        static_assert(height == other.height && width == other.width, "You can't stack matrices of different sizes.");
+        for (int i = 0; i < height; ++i) {
+            for (int j = 0; j < width; ++j) {
+                matrix[i][j] -= other[i][j];
+            }
+        }
+        return *this;
+    }
+
+    Matrix& operator*= (const Field& coefficient) {
+        for (int i = 0; i < height; ++i) {
+            for (int j = 0; j < width; ++j) {
+                matrix[i][j] *= coefficient;
+            }
+        }
+        return *this;
+    }
+
+    Matrix& operator*= (const Matrix& other) {
+        
+        return *this;
+    }
+
+    std::vector<Field> getRow(size_t index) {
+        std::vector<Field> row;
+        for (int i = 0; i < width; ++i) {
+            row.push_back(matrix[index][i]);
+        }
+        return row;
+    }
+
+    std::vector<Field> getColumn(size_t index) {
+        std::vector<Field> column;
+        for (int i = 0; i < height; ++i) {
+            column.push_back(matrix[i][index]);
+        }
+        return column;
+    }
+
+    const Field* operator[] (size_t index) const {
+        return matrix[index];
+    }
+
+    Field* operator[] (size_t index) {
+        return matrix[index];
+    }
 };
