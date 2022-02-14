@@ -2,8 +2,12 @@
 #include <vector>
 #include "biginteger.h"
 
+using std::vector;
+
+/*
 const static char* BAD_DIVISION = "You can divide only prime fields";
 const static char* BAD_ADDITION = "You can't stack matrices of different sizes.";
+*/
 
 template<typename Type>
 Type operator+ (const Type& first, const Type& second) {
@@ -111,8 +115,10 @@ class Matrix {
 private:
     static const size_t height = Height;
     static const size_t width = Width;
-    std::vector<std::vector<Field> > matrix(height, width);
+    vector<vector<Field> > matrix = vector<vector<Field> >(height, vector<Field>(width));
 public:
+    Matrix() = default;
+
     Matrix& operator+= (const Matrix& other) {
         static_assert(height == other.height && width == other.width, "You can't stack matrices of different sizes.");
         for (int i = 0; i < height; ++i) {
@@ -143,20 +149,20 @@ public:
     }
 
     Matrix& operator*= (const Matrix& other) {
-        
+
         return *this;
     }
 
-    std::vector<Field> getRow(size_t index) {
-        std::vector<Field> row;
+    vector<Field> getRow(size_t index) {
+        vector<Field> row;
         for (int i = 0; i < width; ++i) {
             row.push_back(matrix[index][i]);
         }
         return row;
     }
 
-    std::vector<Field> getColumn(size_t index) {
-        std::vector<Field> column;
+    vector<Field> getColumn(size_t index) {
+        vector<Field> column;
         for (int i = 0; i < height; ++i) {
             column.push_back(matrix[i][index]);
         }
