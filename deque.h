@@ -89,11 +89,15 @@ private:
     }
 
     ValueType operator* () const {
-      return (*array_pointer_)[index_];
+      return array_pointer_[index_];
     }
 
     ValueType* operator-> () const {
       return array_pointer_;
+    }
+
+    void Construct(const T& element) {
+      new(array_pointer_ + index_) T(element);
     }
   };
 
@@ -113,7 +117,7 @@ private:
   size_t backets_count_;
 
   void Expand() {
-    
+    //TODO 
   }
 
   bool ShouldCompress() {
@@ -129,11 +133,12 @@ private:
   }
 
   bool FreePlaceBack() {
-    return (begin_.array_pointer == arrays_ && begin_.index_ == 0);
+    return (end_.array_pointer_ == arrays_ + backets_count_);
   }
 
   bool FreePlaceFront() {
-    return (end_.array_pointer == arrays_ + backets_count_);
+    return (begin_.array_pointer_ == arrays_[0] && begin_.index_ == 0);
+
   }
 
 public:
@@ -182,6 +187,7 @@ public:
     if (!FreePlaceBack()) {
       Expand();
     }
+    end_.Construct(element);  
     ++end_;
   }
 
@@ -190,7 +196,7 @@ public:
       Expand();
     }
     --begin_;
-    new(begin_._array_pointer[begin_.index_]) T(element);
+    begin_.Construct(element);
   }
 
   void pop_back() {
