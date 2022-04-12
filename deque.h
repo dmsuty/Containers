@@ -7,17 +7,27 @@ private:
   template<bool is_const>
   struct basic_iterator {
     using ValueType = std::conditional_t<is_const, const T, T>;
-    ValueType* array_pointer_;
+    using PointerType = ValueType*;
+    using DoublePointer = std::conditional_t<is_const, const PointerType*, T**>;
+
+    DoublePointer backet_pointer_;
+    PointerType array_pointer_;
     size_t index_;
 
-    basic_iterator(ValueType* array_pointer, size_t index):
-      array_pointer_(array_pointer), index_(index) {}
+    explicit basic_iterator() = default;
+
+    explicit basic_iterator(DoublePointer backet_pointer, PointerType array_pointer, int index):
+      backet_pointer_(backet_pointer), array_pointer_(array_pointer), index_(index) {}   
+
+    explicit basic_iterator(DoublePointer backet_pointer):
+      backet_pointer_(backet_pointer), array_pointer_(*backet_pointer_), index_(0) {}
 
     basic_iterator& operator++ () {
       ++index_;
       if (index_ == kArray_size_) {
+        backet_pointer_++;
+        array_pointer_ = *backet_pointer_;
         index_ = 0;
-        ++array_pointer_;
       }
       return *this;
     }
@@ -30,8 +40,9 @@ private:
 
     basic_iterator& operator-- () {
       if (index_ == 0) {
+        backet_pointer_--;
+        array_pointer_ = *backet_pointer_; 
         index_ = kArray_size_ - 1;
-        --array_pointer_;
       } else {
         --index_;
       }
@@ -44,24 +55,39 @@ private:
       return result;
     }
 
-    int operator- (const basic_iterator& other) {
-      int backets_between = array_pointer_ - other.array_pointer_;
+    int operator- (const basic_iterator& other) const {
+      int backets_between = backet_pointer_ - other.backet_pointer_;
       return backets_between * kArray_size_ + index_ - other.index_;
     }
 
     basic_iterator& operator+= (int step) {
       step += index_;
-      index_ = 0;
       int backets_step = step / kArray_size_;
-      array_pointer_ += backets_step;
+      backet_pointer_ += backets_step;
+      array_pointer_ = *backet_pointer_;
       index_ = step % kArray_size_;
       return *(this);
     }
 
-    basic_iterator operator+ (int step) {
-      basic_iterator result = (*this);
+    basic_iterator operator+ (int step) const {
+      basic_iterator result = *this;
       result += step;
       return result;
+    }
+
+    basic_iterator& operator-= (int step) {
+      step += kArray_size_ - index_ - 1;
+      int backets_step = step / kArray_size_;
+      backet_pointer_ -= backets_step;
+      array_pointer_ = *backet_pointer_;
+      index_ = kArray_size_ - 1 - step % kArray_size_;
+      return *(this);
+    }
+
+    basic_iterator operator- (int step) const {
+      basic_iterator result = *this;
+      result -= step;
+      return result; 
     }
 
     bool operator< (const basic_iterator& other) const {
@@ -88,16 +114,23 @@ private:
       return !(*this < other);
     }
 
-    ValueType operator* () const {
+    ValueType& operator* () const {
       return array_pointer_[index_];
     }
 
-    ValueType* operator-> () const {
-      return array_pointer_;
+    PointerType operator-> () const {
+      return array_pointer_ + index_;
     }
 
     void Construct(const T& element) {
       new(array_pointer_ + index_) T(element);
+    }
+
+    operator basic_iterator<true>() const {
+      if (is_const) {
+        return *this;
+      }
+      return basic_iterator<true>(backet_pointer_, array_pointer_, index_);
     }
   };
 
@@ -109,42 +142,59 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
-  static const size_t kArray_size_ = 1000;
+  static const size_t kArray_size_ = 5;
   static const size_t kByte_Array_size_ = sizeof(T) * kArray_size_;
-  T** arrays_;
+  size_t backets_count_;
+  T** backets_;
   iterator begin_;
   iterator end_;
-  size_t backets_count_;
 
   void Expand() {
-    //TODO 
+    T** new_arrays = new T*[backets_count_ * 3]; 
+    for (size_t i = 0; i < backets_count_ * 3; ++i) {
+      if (i < backets_count_ || (i >= backets_count_ * 2)) {
+        new_arrays[i] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+      } else {
+        new_arrays[i] = backets_[i - backets_count_];
+      }
+    }
+    UpdateIteratorAfterExpand(new_arrays, begin_);
+    UpdateIteratorAfterExpand(new_arrays, end_);
+    delete[] backets_;
+    backets_ = new_arrays;
+    backets_count_ *= 3;
   }
 
-  bool ShouldCompress() {
-    return size() * 9 < backets_count_ * kArray_size_;
+  void UpdateIteratorAfterExpand(T** new_arrays, iterator& iter) {
+    int backets_number = iter.backet_pointer_ - backets_;
+    iter.backet_pointer_ = new_arrays + (backets_number + backets_count_);
+    iter.array_pointer_ = *(iter.backet_pointer_);
   }
 
-  void Compress() {
-    //TODO
-  }
-
-  iterator ToIter(size_t i) {
+  iterator ToIter(int i) const {
     return begin_ + i;
   }
 
   bool FreePlaceBack() {
-    return (end_.array_pointer_ == arrays_ + backets_count_);
+    return !(end_.backet_pointer_ == backets_ + backets_count_);
   }
 
   bool FreePlaceFront() {
-    return (begin_.array_pointer_ == arrays_[0] && begin_.index_ == 0);
+    return !(begin_.backet_pointer_ == backets_ && begin_.index_ == 0);
+  }
 
+  void swap(Deque& other) {
+    std::swap(backets_, other.backets_);
+    std::swap(backets_count_, other.backets_count_);
+    std::swap(begin_, other.begin_);
+    std::swap(end_, other.end_);
   }
 
 public:
-  Deque(): arrays_(new T*[1]), begin_(iterator(arrays_[0], -1)), 
-    end_(iterator(arrays_[0], 0)), backets_count_(1) {
-    arrays_[0] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+  Deque(): backets_count_(1), backets_(new T*[1]) {
+    backets_[0] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+    begin_ = iterator(backets_);
+    end_ = iterator(backets_);
   }
 
   Deque(int new_size): Deque() {
@@ -157,29 +207,57 @@ public:
     for (int i = 0; i < new_size; ++i) {
       (*this).push_back(element);
     }
-  } 
+  }
 
-  size_t size() const {
+  Deque(const Deque& other): 
+      backets_count_(other.backets_count_), backets_(new T*[backets_count_]) {
+    for (size_t i = 0; i < backets_count_; ++i) {
+      backets_[i] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+    }
+    begin_ = iterator(backets_) + (other.begin_ - iterator(other.backets_));
+    end_ = begin_ + other.size();
+    iterator curr_iter = begin_;
+    iterator other_iter = other.begin_;
+    while (curr_iter != end_) {
+      curr_iter.Construct(*other_iter);
+      ++curr_iter;
+      ++other_iter;
+    }
+  }
+
+  Deque& operator=(const Deque &other) {
+    Deque copy(other);
+    swap(copy);
+    return *this;
+  }
+
+  size_t size() const noexcept {
     return end_ - begin_;
   }
 
-  bool empty() const {
+  bool empty() const noexcept {
     return size() == 0;
   }
 
   T& operator[] (size_t i) noexcept {
-    return *ToIter(i);
+    return *(ToIter(i));
   }
 
   const T& operator[] (size_t i) const noexcept {
-    return *ToIter(i);
+    return *(ToIter(i));
   }
 
   T& at(size_t i) {
+    if (i >= size()) {
+      throw std::out_of_range("Out of range ;(");
+    }
     return (*this)[i];
   }
 
-  const T& at(size_t i) const  {
+  const T& at(size_t i) const {
+    if (i >= size()) {
+      throw std::out_of_range("Out of range ;(");
+    }
     return (*this)[i];
   }
 
@@ -200,48 +278,77 @@ public:
   }
 
   void pop_back() {
-    --end_;
-    if (ShouldCompress()) {
-      Compress();
+    if (size() == 0) {
+      throw;
     }
+    --end_;
   }
 
   void pop_front() {
+    if (size() == 0) {
+      throw;
+    }
     ++begin_;
-    if (ShouldCompress()) {
-      Compress();
+  }
+
+  void erase(iterator iter) {
+    if (size() == 0) {
+      throw;
+    }
+    for (iterator curr_iter = iter; curr_iter + 1 != end_; curr_iter++) {
+      std::swap(*(curr_iter), *(curr_iter + 1));
+    }
+    this->pop_back();
+  }
+
+  void insert(iterator iter, const T& element) {
+    try {
+      this->push_back(element);
+    } catch (...) {
+      throw;
+    }
+    for (iterator curr_iter = end_ - 1; curr_iter != iter; curr_iter--) {
+      std::swap(*(curr_iter), *(curr_iter - 1));
     }
   }
 
-  iterator begin() {
+  iterator begin() noexcept {
     return begin_;
   }
 
-  iterator end() {
+  iterator end() noexcept {
     return end_;
   }
 
-  iterator rbegin() {
-    return std::reverse_iterator<iterator>(end_ - 1);
+  const_iterator begin() const noexcept {
+    return cbegin();
   }
 
-  iterator rend() {
-    //TODO
+  const_iterator end() const noexcept {
+    return cend();
   }
 
-  const_iterator cbegin() const {
+  iterator rbegin() noexcept {
+    return reverse_iterator(end_ - 1);
+  }
+
+  iterator rend() noexcept {
+    return reverse_iterator(begin_ - 1);
+  }
+
+  const_iterator cbegin() const  noexcept {
     return const_iterator(begin_);
   }
 
-  const_iterator cend() const {
+  const_iterator cend() const  noexcept {
     return const_iterator(end_);
   }
 
-  const_reverse_iterator crbegin() const {
+  const_reverse_iterator crbegin() const noexcept {
     //TODO
   }
 
-  const_reverse_iterator crend() const {
+  const_reverse_iterator crend() const noexcept {
     //TODO
   }
 };
