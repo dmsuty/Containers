@@ -142,7 +142,7 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
-  static const size_t kArray_size_ = 5;
+  static const size_t kArray_size_ = 10'000;
   static const size_t kByte_Array_size_ = sizeof(T) * kArray_size_;
   size_t backets_count_;
   T** backets_;
@@ -352,4 +352,3 @@ public:
     //TODO
   }
 };
-  
