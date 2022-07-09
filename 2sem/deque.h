@@ -7,26 +7,26 @@ private:
   template<bool is_const>
   struct basic_iterator {
     using ValueType = std::conditional_t<is_const, const T, T>;
-    using PointerType = ValueType*;
-    using DoublePointer = std::conditional_t<is_const, const PointerType*, T**>;
+    using Pointer = ValueType*;
+    using DoublePointer = std::conditional_t<is_const, const Pointer*, T**>;
 
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::random_access_iterator_tag;
     using value_type = typename std::conditional<is_const, const T, T>::type;
 
     DoublePointer backet_pointer_;
-    PointerType array_pointer_;
+    Pointer array_pointer_;
     size_t index_;
 
     explicit basic_iterator() = default;
 
-    explicit basic_iterator(DoublePointer backet_pointer, PointerType array_pointer, int index):
+    explicit basic_iterator(DoublePointer backet_pointer, Pointer array_pointer, int index):
       backet_pointer_(backet_pointer), array_pointer_(array_pointer), index_(index) {}
 
     explicit basic_iterator(DoublePointer backet_pointer):
       backet_pointer_(backet_pointer), array_pointer_(*backet_pointer_), index_(0) {}
 
-    basic_iterator& operator++ () noexcept {
+    basic_iterator& operator++ ()  noexcept {
       ++index_;
       if (index_ == kArray_size_) {
         backet_pointer_++;
@@ -122,17 +122,24 @@ private:
       return array_pointer_[index_];
     }
 
-    PointerType operator-> () const noexcept {
+    Pointer operator-> () const noexcept {
       return array_pointer_ + index_;
     }
 
     void Construct(const T& element) {
       try {
         new(array_pointer_ + index_) T(element);
-      } catch (...) {}
+      } catch (...) {
+        throw;
+      }
     }
 
-    operator basic_iterator<true>() const noexcept {
+    void Deconstruct() {
+      T& el = *(*this);
+      el.~T();
+    }
+
+    operator basic_iterator<true>() const {
       return basic_iterator<true>(backet_pointer_, array_pointer_, index_);
     }
   };
@@ -154,15 +161,14 @@ private:
   iterator end_;
 
   void Expand() {
+    size_t done_news = 0;
+    T** new_arrays;
     try {
-      T** new_arrays = new T*[backets_count_ * 3];
-    } catch (...) {
-      delete[] new_arrays;
-    }
-    try {
+      new_arrays = new T*[backets_count_ * 3];
       for (size_t i = 0; i < backets_count_ * 3; ++i) {
         if (i < backets_count_ || (i >= backets_count_ * 2)) {
           new_arrays[i] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+          ++done_news;
         } else {
           new_arrays[i] = backets_[i - backets_count_];
         }
@@ -174,11 +180,12 @@ private:
       backets_count_ *= 3;
     } catch (...) {
       for (size_t i = 0; i < backets_count_ * 3; ++i) {
-        if (i < backets_count_ || (i >= backets_count_ * 2)) {
-          delete[] new_arrays[i];
+        if ((i < done_news && i < backets_count_) || i >= backets_count_ * 2) {
+          delete[] reinterpret_cast<uint8_t*>(new_arrays[i]);
         }
       }
-      delete[] new_arrays;
+      delete new_arrays;
+      throw;
     }
   }
 
@@ -188,19 +195,19 @@ private:
     iter.array_pointer_ = *(iter.backet_pointer_);
   }
 
-  iterator ToIter(int i) {
+  iterator ToIter(int i) const noexcept {
     return begin_ + i;
   }
 
-  bool FreePlaceBack() {
+  bool FreePlaceBack() noexcept {
     return !(end_.backet_pointer_ == backets_ + backets_count_ - 1 && end_.index_ == kArray_size_ - 1);
   }
 
-  bool FreePlaceFront() {
+  bool FreePlaceFront() noexcept {
     return !(begin_.backet_pointer_ == backets_ && begin_.index_ == 0);
   }
 
-  void swap(Deque& other) {
+  void swap(Deque& other) noexcept {
     std::swap(backets_, other.backets_);
     std::swap(backets_count_, other.backets_count_);
     std::swap(begin_, other.begin_);
@@ -209,7 +216,7 @@ private:
 
   void clear() {
     while (size()) {
-      this->pop_back();
+      pop_back();
     }
   }
 
@@ -226,36 +233,58 @@ public:
   }
 
   Deque(int new_size): Deque() {
-    for (int i = 0; i < new_size; ++i) {
-      (*this).push_back(T());
+    try {
+      for (int i = 0; i < new_size; ++i) {
+        (*this).push_back(T());
+      }
+    } catch (...) {
+      clear();
+      throw;
     }
   }
 
   Deque(int new_size, const T& element): Deque() {
-    for (int i = 0; i < new_size; ++i) {
-      (*this).push_back(element);
+    try {
+      for (int i = 0; i < new_size; ++i) {
+        (*this).push_back(element);
+      }
+    } catch (...) {
+      clear();
+      throw;
     }
   }
 
   Deque(const Deque& other):
       backets_count_(other.backets_count_), backets_(new T*[backets_count_]) {
-    for (size_t i = 0; i < backets_count_; ++i) {
-      backets_[i] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
-    }
-    begin_ = iterator(backets_) + (other.begin_ - iterator(other.backets_));
-    end_ = begin_ + other.size();
-    iterator curr_iter = begin_;
-    iterator other_iter = other.begin_;
-    while (curr_iter != end_) {
-      curr_iter.Construct(*other_iter);
-      ++curr_iter;
-      ++other_iter;
+    try {
+      for (size_t i = 0; i < backets_count_; ++i) {
+        backets_[i] = reinterpret_cast<T*>(new uint8_t[kByte_Array_size_]);
+      }
+      begin_ = iterator(backets_) + (other.begin_ - iterator(other.backets_));
+      end_ = begin_ + other.size();
+      iterator curr_iter = begin_;
+      iterator other_iter = other.begin_;
+      while (curr_iter != end_) {
+        curr_iter.Construct(*other_iter);
+        ++curr_iter;
+        ++other_iter;
+      }
+    } catch (...) {
+      if (backets_count_ == other.backets_count_) {
+        clear();
+      }
+      for (size_t curr_backet = 0; curr_backet < backets_count_; ++curr_backet) {
+        delete[] reinterpret_cast<uint8_t*>(backets_[curr_backet]);
+      }
+      delete[] backets_;
+      throw;
     }
   }
 
   ~Deque() {
+    clear();
     for (size_t i = 0; i < backets_count_; ++i) {
-      delete[] backets_[i];
+      delete[] reinterpret_cast<uint8_t*>(backets_[i]);
     }
     delete[] backets_;
   }
@@ -305,17 +334,22 @@ public:
   }
 
   void push_front(const T& element) {
-    if (!FreePlaceFront()) {
-      Expand();
+    try {
+      if (!FreePlaceFront()) {
+        Expand();
+      }
+      --begin_;
+      begin_.Construct(element);
+    } catch (...) {
+      throw;
     }
-    --begin_;
-    begin_.Construct(element);
   }
 
   void pop_back() {
     if (size() == 0) {
       throw;
     }
+    end_.Deconstruct();
     --end_;
   }
 
@@ -323,6 +357,7 @@ public:
     if (size() == 0) {
       throw;
     }
+    begin_.Deconstruct();
     ++begin_;
   }
 
@@ -330,23 +365,25 @@ public:
     if (size() == 0) {
       throw;
     }
+    Deque start_copy = *this;
     for (iterator curr_iter = iter; curr_iter + 1 != end_; curr_iter++) {
       std::swap(*(curr_iter), *(curr_iter + 1));
     }
-    this->pop_back();
+    pop_back();
   }
 
-  iterator insert(iterator iter, const T& element) {
-    int shift = iter - begin_;
+  void insert(iterator iter, const T& element) {
+    Deque start_copy = *this;
     try {
-      this->push_back(element);
+      int shift = iter - begin_;
+      push_back(element);
+      for (iterator curr_iter = end_ - 1; curr_iter - begin_ != shift; curr_iter--) {
+        std::swap(*(curr_iter), *(curr_iter - 1));
+      }
     } catch (...) {
+      swap(start_copy);
       throw;
     }
-    for (iterator curr_iter = end_ - 1; curr_iter - begin_ != shift; curr_iter--) {
-      std::swap(*(curr_iter), *(curr_iter - 1));
-    }
-    return begin_ + shift;
   }
 
   iterator begin() noexcept {
@@ -389,4 +426,5 @@ public:
     return std::make_reverse_iterator(cend());
   }
 };
+
 
