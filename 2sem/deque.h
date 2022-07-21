@@ -64,7 +64,7 @@ private:
       return backets_between * kArray_size_ + index_ - other.index_;
     }
 
-    basic_iterator& operator+= (int step) noexcept {
+    basic_iterator& operator+= (long long step) noexcept {
       step += index_;
       int backets_step = step / kArray_size_;
       backet_pointer_ += backets_step;
@@ -180,7 +180,7 @@ private:
       backets_count_ *= 3;
     } catch (...) {
       for (size_t i = 0; i < backets_count_ * 3; ++i) {
-        if ((i < done_news && i < backets_count_) || i >= backets_count_ * 2) {
+        if (i < done_news && (i < backets_count_ || i >= backets_count_ * 2)) {
           delete[] reinterpret_cast<uint8_t*>(new_arrays[i]);
         }
       }
@@ -235,10 +235,9 @@ public:
   Deque(int new_size): Deque() {
     try {
       for (int i = 0; i < new_size; ++i) {
-        (*this).push_back(T());
+        push_back(T());
       }
     } catch (...) {
-      clear();
       throw;
     }
   }
@@ -249,7 +248,6 @@ public:
         (*this).push_back(element);
       }
     } catch (...) {
-      clear();
       throw;
     }
   }
@@ -427,4 +425,13 @@ public:
   }
 };
 
-
+/*
+132-134 строки ничего не делают. если ты просто ловишь и перебрасываешь исключение, с тем же успехом его можно просто не ловить. ну не очень хорошо что это метод итератора, причём публичный
+273 всегда true
+277 не учитывает сколько реально бакетов успели аллоцироваться до исключения
+самый простой способ безопасно реализовать эту функцию - через пушбеки
+341 и 342 строки нужно поменять местами и вообще убрать try catch
+350 - так делать нельзя, просто throw; без активного исключения скрашит программу
+в erase явно не хватает кода, потому что start_copy создаётся, но не используется, но идейно тоже самое, что и insert :)
+вообще код довольно приятный, чистый. разве что имена методов в разном стиле
+*/
