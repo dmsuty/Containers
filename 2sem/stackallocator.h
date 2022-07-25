@@ -1,6 +1,8 @@
+//TODO exceptions!!!
 #include <iostream>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 
 template<size_t N>
 class alignas(std::max_align_t) StackStorage {
@@ -12,7 +14,7 @@ class alignas(std::max_align_t) StackStorage {
   StackStorage() = default;
 
   uint8_t* GetMemory(size_t bytes, size_t align) {
-    //TODO free place is not endless
+    //TODO free place is not endless(for exceptions)
     if (free_index_ % align != 0) {
       free_index_ += align - (free_index_ % align);
     }
@@ -62,10 +64,10 @@ class StackAllocator {
   }
 
   //in theory it's not necesarry(alloc_traits), why not???
-  template <typename U>
-  struct rebind {
-    using other = StackAllocator<U, N>;
-  };
+  //template <typename U>
+  //struct rebind {
+  //  using other = StackAllocator<U, N>;
+  //};
 };
 
 
@@ -75,19 +77,21 @@ class List {
   struct BaseNode {
     BaseNode* prev;
     BaseNode* next;
+
+    BaseNode(): prev(this), next(this) {}
   };
 
   struct Node : BaseNode {
     T value;
   };
 
-  template<typename ValueType> //mb <bool is_const>
+  template<typename value_type> //mb <bool is_const>
   struct basic_iterator {
     using iterator_category = std::bidirectional_iterator_tag;
-    BaseNode* node_ptr;
+    BaseNode* base_node_ptr;
 
     basic_iterator& operator-- () {
-      node_ptr = node_ptr->prev;
+      base_node_ptr = base_node_ptr->prev;
       return *this;
     }
 
@@ -98,7 +102,7 @@ class List {
     }
 
     basic_iterator& operator++ () {
-      node_ptr = node_ptr->prev;
+      base_node_ptr = base_node_ptr->prev;
       return *this;
     }
 
@@ -119,30 +123,59 @@ class List {
       return result;
     }
 
+    basic_iterator operator- (int step) {
+      return (*this) + (-step);
+    }
+
+    value_type& operator* () {
+      Node* node_ptr = static_cast<Node*>(base_node_ptr);
+      return node_ptr->value;
+    }
+
   };
 
-   //some logic
  public:
   using iterator = basic_iterator<T>;
   using const_iterator = basic_iterator<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-  List() {}
+  using NodeAlloc = typename std::allocator_traits<Allocator>::template rebind_alloc<Node>; //why typename and template
+  using NodeAllocTraits = std::allocator_traits<NodeAlloc>;
 
-  List(size_t size) {}
+ private:
+  size_t size_ = 0;
+  BaseNode fake_node_ = BaseNode();
+  NodeAlloc allocator_ = NodeAlloc();
 
-  List(size_t size, const T& default_element) {}
+ public:
+  List() = default;
 
-  List(Allocator alloc) {}
+  List(size_t size, const T& default_element) {
+    for (size_t i = 0; i < size; ++i) {
+      push_back(default_element);
+    }
+  }
 
-  List(size_t size, Allocator alloc) {}
+  List(size_t size): List(size, T()) {}
 
-  List(size_t size, const T& default_element, Allocator alloc) {}
+  List(Allocator alloc): allocator_(NodeAllocTraits::select_on_container_copy_construction(alloc)) {}
 
-  List(const List& other) {}
+  List(size_t size, const T& default_element, Allocator alloc): List(alloc) {
+    for (size_t i = 0; i < size; ++i) {
+      push_back(default_element);
+    }
+  }
 
-  List& operator= (const List& other) {}
+  List(size_t size, Allocator alloc): List(size, T(), alloc) {}
+
+  List(const List& other): List(other.get_allocator()) {
+    for (T& el : other) { //may use auto, but I liked T more
+      push_back(el);
+    }
+  }
+
+  //List& operator= (const List& other): {} //what to do with allocator and don't forget to clean
 
   ~List() {}
 
