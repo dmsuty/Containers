@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstddef>
+#include <iterator>
 
 template<size_t N>
 class alignas(std::max_align_t) StackStorage {
@@ -19,6 +20,7 @@ class alignas(std::max_align_t) StackStorage {
     return pool_ + (free_index_ - bytes);
   }
 };
+
 
 template<typename T, size_t N>
 class StackAllocator {
@@ -59,28 +61,73 @@ class StackAllocator {
     return storage_pointer_ != other.storage_pointer_;
   }
 
-  //in theory it's not necesarry, why not???
+  //in theory it's not necesarry(alloc_traits), why not???
   template <typename U>
   struct rebind {
     using other = StackAllocator<U, N>;
   };
 };
 
+
 template<typename T, typename Allocator=std::allocator<T> >
 class List {
- public:
-  template<typename ValueType>
+ private:
+  struct BaseNode {
+    BaseNode* prev;
+    BaseNode* next;
+  };
+
+  struct Node : BaseNode {
+    T value;
+  };
+
+  template<typename ValueType> //mb <bool is_const>
   struct basic_iterator {
+    using iterator_category = std::bidirectional_iterator_tag;
+    BaseNode* node_ptr;
+
+    basic_iterator& operator-- () {
+      node_ptr = node_ptr->prev;
+      return *this;
+    }
+
+    basic_iterator operator-- (int) {
+      basic_iterator curr_iter(*this);
+      --(*this);
+      return curr_iter;
+    }
+
+    basic_iterator& operator++ () {
+      node_ptr = node_ptr->prev;
+      return *this;
+    }
+
+    basic_iterator operator++ (int) {
+      basic_iterator curr_iter(*this);
+      ++(*this);
+      return curr_iter;
+    }
+
+    basic_iterator operator+ (int step) {
+      basic_iterator result(*this);
+      for (int i = 0; i < step; ++i) {
+        ++result;
+      }
+      for (int i = 0; i < -step; ++i) {
+        --result;
+      }
+      return result;
+    }
 
   };
 
+   //some logic
+ public:
   using iterator = basic_iterator<T>;
   using const_iterator = basic_iterator<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
- private:
-   //some logic
- public:
+
   List() {}
 
   List(size_t size) {}
