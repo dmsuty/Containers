@@ -63,11 +63,11 @@ class StackAllocator {
     return storage_pointer_ != other.storage_pointer_;
   }
 
-  //in theory it's not necesarry(alloc_traits), why not???
-  //template <typename U>
-  //struct rebind {
-  //  using other = StackAllocator<U, N>;
-  //};
+  //alloc_traits isn't good enough, so I need to write it
+  template <typename U>
+  struct rebind {
+    using other = StackAllocator<U, N>;
+  };
 };
 
 
@@ -144,7 +144,7 @@ class List {
   using NodeAllocTraits = std::allocator_traits<NodeAlloc>;
 
  private:
-  size_t size_ = 0;
+  size_t size_ = 0;  //should I do this if it is default value(fedor's ans)
   BaseNode fake_node_ = BaseNode();
   NodeAlloc allocator_ = NodeAlloc();
 
@@ -177,21 +177,42 @@ class List {
 
   //List& operator= (const List& other): {} //what to do with allocator and don't forget to clean
 
-  ~List() {}
+  ~List() {
+    while (size_) {
+      pop_back();
+    }
+  }
 
-  Allocator get_allocator() {} const
+  size_t size() const {
+    return size_;
+  }
 
-  void push_back(const T& element) {}
+  Allocator get_allocator() const {
+    return allocator_;
+  }
 
-  void push_front(const T& element) {}
-
-  void pop_back(const T& element) {}
-
-  void pop_front(const T& element) {}
-
-  void insert(iterator iter, const T& element) {}
+  void insert(iterator iter, const T& element) {
+    iter->next = NodeAllocTraits::allocate(allocator_);
+    static_cast<Node*>(iter->next)->value = element;
+  }
 
   void erase(iterator iter) {}
+
+  void push_back(const T& element) {
+    insert(end() - 1, element);
+  }
+
+  void push_front(const T& element) {
+    insert(begin(), element);
+  }
+
+  void pop_back(const T& element) {
+    erase(end() - 1);
+  }
+
+  void pop_front(const T& element) {
+    erase(begin());
+  }
 
   iterator begin() {}
 
