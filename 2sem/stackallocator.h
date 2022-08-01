@@ -132,6 +132,18 @@ class List {
       return node_ptr->value;
     }
 
+   private:
+    BaseNode& get_node() {
+      return *base_node_ptr;
+    }
+
+    BaseNode* next() {
+      return base_node_ptr->next;
+    }
+
+    BaseNode* prev() {
+      return base_node_ptr->prev;
+    }
   };
 
  public:
@@ -147,6 +159,17 @@ class List {
   size_t size_ = 0;  //should I do this if it is default value(fedor's ans)
   BaseNode fake_node_ = BaseNode();
   NodeAlloc allocator_ = NodeAlloc();
+
+  void connect(BaseNode* first, BaseNode* second) {
+    first->next = second;
+    second->prev = first;
+  }
+
+  void my_swap(List& other) {
+    std::swap(size_, other.size_);
+    std::swap(fake_node_, other.fake_node_);
+    std::swap(allocator_, other.get_allocator());
+  }
 
  public:
   List() = default;
@@ -175,7 +198,19 @@ class List {
     }
   }
 
-  //List& operator= (const List& other): {} //what to do with allocator and don't forget to clean
+  List& operator= (const List& other) {
+    if (NodeAllocTraits::propagate_on_container_copy_assignment::value) {
+      allocator_ = other.get_allocator();
+    } else {
+      allocator_ = NodeAllocTraits::select_on_container_copy_construction(other.get_allocator());
+    }
+    List copy(allocator_);
+    for (T& el: other) {
+      copy.push_back(el);
+    }
+    my_swap(copy);
+    return *this;
+  } //what to do with allocator and don't forget to clean
 
   ~List() {
     while (size_) {
@@ -192,11 +227,20 @@ class List {
   }
 
   void insert(iterator iter, const T& element) {
-    iter->next = NodeAllocTraits::allocate(allocator_);
-    static_cast<Node*>(iter->next)->value = element;
+    ++size_;
+    BaseNode* old_next_node_ptr = iter.next();
+    Node* new_next_node_ptr = NodeAllocTraits::allocate(allocator_);
+    NodeAllocTraits::construct(allocator_, new_next_node_ptr, element);
+    connect(iter.base_node_ptr, new_next_node_ptr);
+    connect(new_next_node_ptr, old_next_node_ptr);
   }
 
-  void erase(iterator iter) {}
+  void erase(iterator iter) {
+    --size_;
+    connect(iter.prev(), iter.next());
+    NodeAllocTraits::destroy(allocator_, static_cast<Node*>(iter.base_node_ptr)); //mb should make function for the cast
+    NodeAllocTraits::deallocate(allocator_, static_cast<Node*>(iter.base_node_ptr), 1);
+  }
 
   void push_back(const T& element) {
     insert(end() - 1, element);
