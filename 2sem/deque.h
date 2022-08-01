@@ -126,7 +126,7 @@ private:
       return array_pointer_ + index_;
     }
 
-    void Construct(const T& element) {
+    void construct(const T& element) {
       try {
         new(array_pointer_ + index_) T(element);
       } catch (...) {
@@ -134,7 +134,7 @@ private:
       }
     }
 
-    void Deconstruct() {
+    void deconstruct() {
       T& el = *(*this);
       el.~T();
     }
@@ -160,7 +160,7 @@ private:
   iterator begin_;
   iterator end_;
 
-  void Expand() {
+  void expand() {
     size_t done_news = 0;
     T** new_arrays;
     try {
@@ -173,8 +173,8 @@ private:
           new_arrays[i] = backets_[i - backets_count_];
         }
       }
-      UpdateIteratorAfterExpand(new_arrays, begin_);
-      UpdateIteratorAfterExpand(new_arrays, end_);
+      update_iterator_after_expand(new_arrays, begin_);
+      update_iterator_after_expand(new_arrays, end_);
       delete[] backets_;
       backets_ = new_arrays;
       backets_count_ *= 3;
@@ -189,21 +189,21 @@ private:
     }
   }
 
-  void UpdateIteratorAfterExpand(T** new_arrays, iterator& iter) {
+  void update_iterator_after_expand(T** new_arrays, iterator& iter) {
     int backets_number = iter.backet_pointer_ - backets_;
     iter.backet_pointer_ = new_arrays + (backets_number + backets_count_);
     iter.array_pointer_ = *(iter.backet_pointer_);
   }
 
-  iterator ToIter(int i) const noexcept {
+  iterator to_iter(int i) const noexcept {
     return begin_ + i;
   }
 
-  bool FreePlaceBack() noexcept {
+  bool free_place_back() noexcept {
     return !(end_.backet_pointer_ == backets_ + backets_count_ - 1 && end_.index_ == kArray_size_ - 1);
   }
 
-  bool FreePlaceFront() noexcept {
+  bool free_place_front() noexcept {
     return !(begin_.backet_pointer_ == backets_ && begin_.index_ == 0);
   }
 
@@ -263,7 +263,7 @@ public:
       iterator curr_iter = begin_;
       iterator other_iter = other.begin_;
       while (curr_iter != end_) {
-        curr_iter.Construct(*other_iter);
+        curr_iter.construct(*other_iter);
         ++curr_iter;
         ++other_iter;
       }
@@ -302,11 +302,11 @@ public:
   }
 
   T& operator[] (size_t i) noexcept {
-    return *(ToIter(i));
+    return *(to_iter(i));
   }
 
   const T& operator[] (size_t i) const noexcept {
-    return *(ToIter(i));
+    return *(to_iter(i));
   }
 
   T& at(size_t i) {
@@ -324,20 +324,20 @@ public:
   }
 
   void push_back(const T& element) {
-    if (!FreePlaceBack()) {
-      Expand();
+    if (!free_place_back()) {
+      expand();
     }
-    end_.Construct(element);
+    end_.construct(element);
     ++end_;
   }
 
   void push_front(const T& element) {
     try {
-      if (!FreePlaceFront()) {
-        Expand();
+      if (!free_place_front()) {
+        expand();
       }
       --begin_;
-      begin_.Construct(element);
+      begin_.construct(element);
     } catch (...) {
       throw;
     }
@@ -347,7 +347,7 @@ public:
     if (size() == 0) {
       throw;
     }
-    end_.Deconstruct();
+    end_.deconstruct();
     --end_;
   }
 
@@ -355,7 +355,7 @@ public:
     if (size() == 0) {
       throw;
     }
-    begin_.Deconstruct();
+    begin_.deconstruct();
     ++begin_;
   }
 
@@ -433,5 +433,5 @@ public:
 341 и 342 строки нужно поменять местами и вообще убрать try catch
 350 - так делать нельзя, просто throw; без активного исключения скрашит программу
 в erase явно не хватает кода, потому что start_copy создаётся, но не используется, но идейно тоже самое, что и insert :)
-вообще код довольно приятный, чистый. разве что имена методов в разном стиле
+вообще код довольно приятный, чистый.
 */
