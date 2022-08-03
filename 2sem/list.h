@@ -89,11 +89,16 @@ class List {
     Node(const T& element): value(element) {}
   };
 
-  template<typename value_type> //mb <bool is_const>
+  template<typename ValueType> //mb <bool is_const>
   struct basic_iterator {
+    using value_type = ValueType;
+    using reference = value_type&;
+    using pointer = value_type*;
     using iterator_category = std::bidirectional_iterator_tag;
     using difference_type = std::ptrdiff_t;
     BaseNode* base_node_ptr;
+
+    basic_iterator() = default;
 
     basic_iterator(BaseNode& base_node): base_node_ptr(&base_node) {}
 
@@ -151,7 +156,7 @@ class List {
     }
 
     operator basic_iterator<const value_type>() const {
-      return basic_iterator<const value_type>(base_node_ptr);
+      return basic_iterator<const value_type>(*base_node_ptr);
     }
 
    private:
@@ -283,19 +288,19 @@ class List {
   }
 
   iterator begin() {
-    return iterator(fake_node_) + 1;
+    return iterator(*fake_node_.next);
   }
 
   iterator end() {
-    return iterator(fake_node_);
+    return iterator(*fake_node_.next);
   }
 
   const_iterator begin() const {
-    return cbegin();
+    return iterator(*fake_node_.next);
   }
 
   const_iterator end() const {
-    return cend();
+    return iterator(*fake_node_.next);
   }
 
   const_iterator cbegin() const {
