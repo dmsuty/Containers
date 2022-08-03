@@ -1,7 +1,6 @@
 //TODO exceptions!!!
 #include <iostream>
 #include <cstddef>
-#include <iterator>
 #include <memory>
 
 template<size_t N>
@@ -39,6 +38,9 @@ class StackAllocator {
   template<typename U>
   StackAllocator(const StackAllocator<U, N>& other):
       storage_pointer_(other.storage_pointer_) {}
+
+  template<typename U, size_t M>
+  friend class StackAllocator;
 
   //mb should use const_cast<...>, but idk what's the point
   StackAllocator(StackStorage<N>& storage): storage_pointer_(&storage) {}
@@ -78,17 +80,22 @@ class List {
     BaseNode* prev;
     BaseNode* next;
 
-    BaseNode(): prev(this), next(this) {}
+    BaseNode(): prev(this), next(this) {} //should read more about constr
   };
 
   struct Node : BaseNode {
     T value;
+
+    Node(const T& element): value(element) {}
   };
 
   template<typename value_type> //mb <bool is_const>
   struct basic_iterator {
     using iterator_category = std::bidirectional_iterator_tag;
+    using difference_type = std::ptrdiff_t;
     BaseNode* base_node_ptr;
+
+    basic_iterator(BaseNode& base_node): base_node_ptr(&base_node) {}
 
     basic_iterator& operator-- () {
       base_node_ptr = base_node_ptr->prev;
@@ -102,7 +109,7 @@ class List {
     }
 
     basic_iterator& operator++ () {
-      base_node_ptr = base_node_ptr->prev;
+      base_node_ptr = base_node_ptr->next;
       return *this;
     }
 
@@ -127,9 +134,24 @@ class List {
       return (*this) + (-step);
     }
 
+    value_type* operator->() {
+      return static_cast<Node*>(base_node_ptr)->value;
+    }
+
     value_type& operator* () {
-      Node* node_ptr = static_cast<Node*>(base_node_ptr);
-      return node_ptr->value;
+      return static_cast<Node*>(base_node_ptr)->value;
+    }
+
+    bool operator== (const basic_iterator& other) const {
+      return base_node_ptr == other.base_node_ptr;
+    }
+
+    bool operator!= (const basic_iterator& other) const {
+      return !(*this == other);
+    }
+
+    operator basic_iterator<const value_type>() const {
+      return basic_iterator<const value_type>(base_node_ptr);
     }
 
    private:
@@ -144,9 +166,11 @@ class List {
     BaseNode* prev() {
       return base_node_ptr->prev;
     }
+
+    friend class List; //mb there is another way
   };
 
- public:
+ public: //use iterator_traits
   using iterator = basic_iterator<T>;
   using const_iterator = basic_iterator<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
@@ -156,7 +180,7 @@ class List {
   using NodeAllocTraits = std::allocator_traits<NodeAlloc>;
 
  private:
-  size_t size_ = 0;  //should I do this if it is default value(fedor's ans)
+  size_t size_ = 0; //should I do this if it is default value(fedor's ans)
   BaseNode fake_node_ = BaseNode();
   NodeAlloc allocator_ = NodeAlloc();
 
@@ -168,7 +192,7 @@ class List {
   void my_swap(List& other) {
     std::swap(size_, other.size_);
     std::swap(fake_node_, other.fake_node_);
-    std::swap(allocator_, other.get_allocator());
+    std::swap(allocator_, other.allocator_);
   }
 
  public:
@@ -193,7 +217,7 @@ class List {
   List(size_t size, Allocator alloc): List(size, T(), alloc) {}
 
   List(const List& other): List(other.get_allocator()) {
-    for (T& el : other) { //may use auto, but I liked T more
+    for (const T& el : other) { //may use auto, but I liked T more
       push_back(el);
     }
   }
@@ -205,7 +229,7 @@ class List {
       allocator_ = NodeAllocTraits::select_on_container_copy_construction(other.get_allocator());
     }
     List copy(allocator_);
-    for (T& el: other) {
+    for (const T& el: other) {
       copy.push_back(el);
     }
     my_swap(copy);
@@ -229,7 +253,7 @@ class List {
   void insert(iterator iter, const T& element) {
     ++size_;
     BaseNode* old_next_node_ptr = iter.next();
-    Node* new_next_node_ptr = NodeAllocTraits::allocate(allocator_);
+    Node* new_next_node_ptr = NodeAllocTraits::allocate(allocator_, 1);
     NodeAllocTraits::construct(allocator_, new_next_node_ptr, element);
     connect(iter.base_node_ptr, new_next_node_ptr);
     connect(new_next_node_ptr, old_next_node_ptr);
@@ -247,10 +271,10 @@ class List {
   }
 
   void push_front(const T& element) {
-    insert(begin(), element);
+    insert(end(), element);
   }
 
-  void pop_back(const T& element) {
+  void pop_back() {
     erase(end() - 1);
   }
 
@@ -258,17 +282,43 @@ class List {
     erase(begin());
   }
 
-  iterator begin() {}
+  iterator begin() {
+    return iterator(fake_node_) + 1;
+  }
 
-  iterator end() {}
+  iterator end() {
+    return iterator(fake_node_);
+  }
 
-  const_iterator cbegin() {} const
+  const_iterator begin() const {
+    return cbegin();
+  }
 
-  const_iterator cend() {} const
+  const_iterator end() const {
+    return cend();
+  }
 
-  reverse_iterator rbegin() {}
+  const_iterator cbegin() const {
+    return const_iterator(begin());
+  }
 
-  reverse_iterator rend() {}
+  const_iterator cend() const {
+    return const_iterator(end());
+  }
 
-  //crbegin and crend
+  reverse_iterator rbegin() {
+    return reverse_iterator(end());
+  }
+
+  reverse_iterator rend() {
+    return reverse_iterator(begin());
+  }
+
+  const_reverse_iterator crbegin() const {
+    return reverse_iterator(cend());
+  }
+
+  const_reverse_iterator crend() const {
+    return reverse_iterator(cbegin());
+  }
 };
