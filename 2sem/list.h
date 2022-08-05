@@ -80,7 +80,7 @@ class List {
     BaseNode* prev;
     BaseNode* next;
 
-    BaseNode(): prev(this), next(this) {} //should read more about constr
+    BaseNode(): prev(this), next(this) {} //should read more about constructors
   };
 
   struct Node : BaseNode {
@@ -89,18 +89,24 @@ class List {
     Node(const T& element): value(element) {}
   };
 
-  template<typename ValueType> //mb <bool is_const>
+  template<bool is_const>
   struct basic_iterator {
-    using value_type = ValueType;
+    using value_type = typename std::conditional<is_const, const T, T>::type;
     using reference = value_type&;
     using pointer = value_type*;
     using iterator_category = std::bidirectional_iterator_tag;
     using difference_type = std::ptrdiff_t;
-    BaseNode* base_node_ptr;
+
+    using NodeRef = typename std::conditional<is_const, const Node&, Node&>::type;
+    using NodePtr = typename std::conditional<is_const, const Node*, Node*>::type;
+    using BaseNodeRef = typename std::conditional<is_const, const BaseNode&, BaseNode&>::type;
+    using BaseNodePtr = typename std::conditional<is_const, const BaseNode*, BaseNode*>::type;
+
+    BaseNodePtr base_node_ptr;
 
     basic_iterator() = default;
 
-    basic_iterator(BaseNode& base_node): base_node_ptr(&base_node) {}
+    basic_iterator(BaseNodeRef base_node): base_node_ptr(&base_node) {}
 
     basic_iterator& operator-- () {
       base_node_ptr = base_node_ptr->prev;
@@ -124,7 +130,7 @@ class List {
       return curr_iter;
     }
 
-    basic_iterator operator+ (int step) {
+    basic_iterator operator+ (int step) const {
       basic_iterator result(*this);
       for (int i = 0; i < step; ++i) {
         ++result;
@@ -135,16 +141,16 @@ class List {
       return result;
     }
 
-    basic_iterator operator- (int step) {
+    basic_iterator operator- (int step) const {
       return (*this) + (-step);
     }
 
-    value_type* operator->() {
-      return static_cast<Node*>(base_node_ptr)->value;
+    pointer operator->() const {
+      return static_cast<NodePtr>(base_node_ptr)->value;
     }
 
-    value_type& operator* () {
-      return static_cast<Node*>(base_node_ptr)->value;
+    reference operator* () const {
+      return static_cast<NodePtr>(base_node_ptr)->value;
     }
 
     bool operator== (const basic_iterator& other) const {
@@ -155,8 +161,8 @@ class List {
       return !(*this == other);
     }
 
-    operator basic_iterator<const value_type>() const {
-      return basic_iterator<const value_type>(*base_node_ptr);
+    operator basic_iterator<true>() const {
+      return basic_iterator<true>(*base_node_ptr);
     }
 
    private:
@@ -176,8 +182,8 @@ class List {
   };
 
  public: //use iterator_traits
-  using iterator = basic_iterator<T>;
-  using const_iterator = basic_iterator<const T>;
+  using iterator = basic_iterator<false>;
+  using const_iterator = basic_iterator<true>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -222,7 +228,7 @@ class List {
   List(size_t size, Allocator alloc): List(size, T(), alloc) {}
 
   List(const List& other): List(other.get_allocator()) {
-    for (const T& el : other) { //may use auto, but I liked T more
+    for (const T& el : other) {
       push_back(el);
     }
   }
@@ -239,7 +245,7 @@ class List {
     }
     my_swap(copy);
     return *this;
-  } //what to do with allocator and don't forget to clean
+  }
 
   ~List() {
     while (size_) {
@@ -292,23 +298,23 @@ class List {
   }
 
   iterator end() {
-    return iterator(*fake_node_.next);
+    return iterator(fake_node_);
   }
 
   const_iterator begin() const {
-    return iterator(*fake_node_.next);
+    return cbegin();
   }
 
   const_iterator end() const {
-    return iterator(*fake_node_.next);
+    return cend();
   }
 
   const_iterator cbegin() const {
-    return const_iterator(begin());
+    return const_iterator(*fake_node_.next);
   }
 
   const_iterator cend() const {
-    return const_iterator(end());
+    return const_iterator(fake_node_);
   }
 
   reverse_iterator rbegin() {
