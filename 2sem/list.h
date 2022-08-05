@@ -166,15 +166,15 @@ class List {
     }
 
    private:
-    BaseNode& get_node() {
+    BaseNodeRef get_node() {
       return *base_node_ptr;
     }
 
-    BaseNode* next() {
+    BaseNodePtr next() {
       return base_node_ptr->next;
     }
 
-    BaseNode* prev() {
+    BaseNodePtr prev() {
       return base_node_ptr->prev;
     }
 
@@ -202,8 +202,16 @@ class List {
 
   void my_swap(List& other) {
     std::swap(size_, other.size_);
-    std::swap(fake_node_, other.fake_node_);
     std::swap(allocator_, other.allocator_);
+    fake_nodes_swap(fake_node_, other.fake_node_);
+  }
+
+  void fake_nodes_swap(BaseNode& fake1, BaseNode& fake2) {
+    std::swap(fake1, fake2);
+    fake1.next->prev = &fake1;
+    fake1.prev->next = &fake1;
+    fake2.next->prev = &fake2;
+    fake2.prev->next = &fake2;
   }
 
  public:
@@ -243,7 +251,7 @@ class List {
     for (const T& el: other) {
       copy.push_back(el);
     }
-    my_swap(copy);
+    my_swap(copy); //idk why, but copy is broken instead of *this
     return *this;
   }
 
@@ -291,6 +299,14 @@ class List {
 
   void pop_front(const T& element) {
     erase(begin());
+  }
+
+  T& operator[] (size_t i) { // doesn't work in GDB
+    return *(begin() + i);
+  }
+
+  const T& operator[] (size_t i) const { // the same problem with GDB
+    return *(begin() + i);
   }
 
   iterator begin() {
