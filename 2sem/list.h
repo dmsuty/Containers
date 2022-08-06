@@ -261,7 +261,7 @@ class List {
     }
   }
 
-  size_t size() const {
+  size_t size() const noexcept {
     return size_;
   }
 
@@ -309,43 +309,43 @@ class List {
     return *(begin() + i);
   }
 
-  iterator begin() {
+  iterator begin() noexcept {
     return iterator(*fake_node_.next);
   }
 
-  iterator end() {
+  iterator end() noexcept {
     return iterator(fake_node_);
   }
 
-  const_iterator begin() const {
+  const_iterator begin() const noexcept {
     return cbegin();
   }
 
-  const_iterator end() const {
+  const_iterator end() const noexcept {
     return cend();
   }
 
-  const_iterator cbegin() const {
+  const_iterator cbegin() const noexcept {
     return const_iterator(*fake_node_.next);
   }
 
-  const_iterator cend() const {
+  const_iterator cend() const noexcept {
     return const_iterator(fake_node_);
   }
 
-  reverse_iterator rbegin() {
+  reverse_iterator rbegin() noexcept {
     return reverse_iterator(end());
   }
 
-  reverse_iterator rend() {
+  reverse_iterator rend() noexcept {
     return reverse_iterator(begin());
   }
 
-  const_reverse_iterator crbegin() const {
+  const_reverse_iterator crbegin() const noexcept {
     return reverse_iterator(cend());
   }
 
-  const_reverse_iterator crend() const {
+  const_reverse_iterator crend() const noexcept {
     return reverse_iterator(cbegin());
   }
 };
