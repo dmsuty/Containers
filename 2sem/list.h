@@ -35,19 +35,19 @@ class StackAllocator {
 
   StackAllocator(const StackAllocator& other) = default;
 
-  template<typename U>
-  StackAllocator(const StackAllocator<U, N>& other):
-      storage_pointer_(other.storage_pointer_) {}
-
-  template<typename U, size_t M>
-  friend class StackAllocator;
-
   //mb should use const_cast<...>, but idk what's the point
   StackAllocator(StackStorage<N>& storage): storage_pointer_(&storage) {}
 
   StackAllocator& operator= (const StackAllocator& other) = default;
 
   ~StackAllocator() = default;
+
+  template<typename U>
+  StackAllocator(const StackAllocator<U, N>& other):
+      storage_pointer_(other.storage_pointer_) {}
+
+  template<typename U, size_t M>
+  friend class StackAllocator;
 
   T* allocate(size_t n) {
     return reinterpret_cast<T*>(storage_pointer_->GetMemory(n * sizeof(T), alignof(T)));
@@ -308,7 +308,7 @@ class List {
 
   void erase(iterator iter) {
     connect(iter.prev(), iter.next());
-    NodeAllocTraits::destroy(allocator_, static_cast<Node*>(iter.base_node_ptr)); //mb should make function for the cast
+    NodeAllocTraits::destroy(allocator_, static_cast<Node*>(iter.base_node_ptr));
     NodeAllocTraits::deallocate(allocator_, static_cast<Node*>(iter.base_node_ptr), 1);
     --size_;
   }
@@ -329,11 +329,11 @@ class List {
     erase(begin());
   }
 
-  T& operator[] (size_t i) { // doesn't work in GDB
+  T& operator[] (size_t i) {
     return *(begin() + i);
   }
 
-  const T& operator[] (size_t i) const { // the same problem with GDB
+  const T& operator[] (size_t i) const {
     return *(begin() + i);
   }
 
