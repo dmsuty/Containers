@@ -218,8 +218,13 @@ class List {
   List() = default;
 
   List(size_t size, const T& default_element) {
-    for (size_t i = 0; i < size; ++i) {
-      push_back(default_element);
+    try {
+      for (size_t i = 0; i < size; ++i) {
+        push_back(default_element);
+      }
+    } catch (...) {
+      clear();
+      throw;
     }
   }
 
@@ -228,61 +233,84 @@ class List {
   List(Allocator alloc): allocator_(NodeAllocTraits::select_on_container_copy_construction(alloc)) {}
 
   List(size_t size, const T& default_element, Allocator alloc): List(alloc) {
-    for (size_t i = 0; i < size; ++i) {
-      push_back(default_element);
+    try {
+      for (size_t i = 0; i < size; ++i) {
+        push_back(default_element);
+      }
+    } catch (...) {
+      clear();
+      throw;
     }
   }
 
   List(size_t size, Allocator alloc): List(size, T(), alloc) {}
 
   List(const List& other): List(other.get_allocator()) {
-    for (const T& el : other) {
-      push_back(el);
+    try {
+      for (const T& el : other) {
+        push_back(el);
+      }
+    } catch (...) {
+      clear();
     }
   }
 
   List& operator= (const List& other) {
-    if (NodeAllocTraits::propagate_on_container_copy_assignment::value) {
-      allocator_ = other.get_allocator();
-    } else {
-      allocator_ = NodeAllocTraits::select_on_container_copy_construction(other.get_allocator());
+    try {
+      if (NodeAllocTraits::propagate_on_container_copy_assignment::value) {
+        allocator_ = other.get_allocator();
+      } else {
+        allocator_ = NodeAllocTraits::select_on_container_copy_construction(other.get_allocator());
+      }
+      List copy(allocator_);
+      for (const T& el: other) {
+        copy.push_back(el);
+      }
+      my_swap(copy);
+    } catch (...) {
+      clear();
     }
-    List copy(allocator_);
-    for (const T& el: other) {
-      copy.push_back(el);
-    }
-    my_swap(copy); //idk why, but copy is broken instead of *this
     return *this;
   }
 
-  ~List() {
+  void clear() {
     while (size_) {
       pop_back();
     }
+  }
+
+  ~List() {
+    clear();
   }
 
   size_t size() const noexcept {
     return size_;
   }
 
-  Allocator get_allocator() const {
+  Allocator get_allocator() const noexcept {
     return allocator_;
   }
 
   void insert(iterator iter, const T& element) {
-    ++size_;
-    BaseNode* old_next_node_ptr = iter.next();
-    Node* new_next_node_ptr = NodeAllocTraits::allocate(allocator_, 1);
-    NodeAllocTraits::construct(allocator_, new_next_node_ptr, element);
-    connect(iter.base_node_ptr, new_next_node_ptr);
-    connect(new_next_node_ptr, old_next_node_ptr);
+    Node* new_next_node_ptr;
+    try {
+      BaseNode* old_next_node_ptr = iter.next();
+      new_next_node_ptr = NodeAllocTraits::allocate(allocator_, 1);
+      NodeAllocTraits::construct(allocator_, new_next_node_ptr, element);
+      connect(iter.base_node_ptr, new_next_node_ptr);
+      connect(new_next_node_ptr, old_next_node_ptr);
+      ++size_;
+    } catch (...) {
+      NodeAllocTraits::deallocate(allocator_, new_next_node_ptr, 1);
+      throw;
+    }
   }
 
   void erase(iterator iter) {
-    --size_;
     connect(iter.prev(), iter.next());
     NodeAllocTraits::destroy(allocator_, static_cast<Node*>(iter.base_node_ptr)); //mb should make function for the cast
     NodeAllocTraits::deallocate(allocator_, static_cast<Node*>(iter.base_node_ptr), 1);
+    --size_;
   }
 
   void push_back(const T& element) {
