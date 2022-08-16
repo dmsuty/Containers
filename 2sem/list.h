@@ -9,8 +9,6 @@ class alignas(std::max_align_t) StackStorage {
   size_t free_index_ = 0;
 
  public:
-  StackStorage() = default;
-
   uint8_t* GetMemory(size_t bytes, size_t align) {
     if (free_index_ % align != 0) {
       free_index_ += align - (free_index_ % align);
@@ -27,7 +25,7 @@ class StackAllocator {
   StackStorage<N>* storage_pointer_;
 
  public:
-  using value_type = T;
+  using value_type = T; // useless?
 
   StackAllocator() = delete;
 
