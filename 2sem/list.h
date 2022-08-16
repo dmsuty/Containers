@@ -1,4 +1,3 @@
-//TODO exceptions!!!
 #include <iostream>
 #include <cstddef>
 #include <memory>
@@ -13,7 +12,6 @@ class alignas(std::max_align_t) StackStorage {
   StackStorage() = default;
 
   uint8_t* GetMemory(size_t bytes, size_t align) {
-    //TODO free place is not endless(for exceptions)
     if (free_index_ % align != 0) {
       free_index_ += align - (free_index_ % align);
     }
