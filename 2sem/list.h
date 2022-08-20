@@ -213,7 +213,7 @@ class List {
  public:
   List() = default;
 
-  List(size_t size, const T& default_element) {
+  explicit List(size_t size, const T& default_element) {
     try {
       for (size_t i = 0; i < size; ++i) {
         push_back(default_element);
@@ -224,11 +224,11 @@ class List {
     }
   }
 
-  List(size_t size): List(size, T()) {}
+  explicit List(size_t size): List(size, T()) {}
 
-  List(Allocator alloc): allocator_(NodeAllocTraits::select_on_container_copy_construction(alloc)) {}
+  explicit List(Allocator alloc): allocator_(NodeAllocTraits::select_on_container_copy_construction(alloc)) {}
 
-  List(size_t size, const T& default_element, Allocator alloc): List(alloc) {
+  explicit List(size_t size, const T& default_element, Allocator alloc): List(alloc) {
     try {
       for (size_t i = 0; i < size; ++i) {
         push_back(default_element);
@@ -239,9 +239,9 @@ class List {
     }
   }
 
-  List(size_t size, Allocator alloc): List(size, T(), alloc) {}
+  explicit List(size_t size, Allocator alloc): List(size, T(), alloc) {}
 
-  List(const List& other): List(other.get_allocator()) {
+  explicit List(const List& other): List(other.get_allocator()) {
     try {
       for (const T& el : other) {
         push_back(el);
